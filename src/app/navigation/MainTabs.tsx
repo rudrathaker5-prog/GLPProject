@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@features/auth/store/authStore';
 import { useTranslation } from '@i18n/useTranslation';
@@ -23,6 +24,25 @@ export function MainTabs() {
   const { theme, isDark } = useTheme();
   const { t } = useTranslation();
   const stage = useAuthStore((s) => s.stage);
+  const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+
+  /*
+    The bar used to be a flat 68dp (Android) / 88dp (iOS).
+
+    A numeric `height` in tabBarStyle short-circuits the library's own
+    `49 + insets.bottom` calculation *and* overrides its `paddingBottom:
+    insets.bottom`. With edge-to-edge on and a 3-button navigation bar
+    (insets.bottom ≈ 48dp), the label row was being drawn inside the system
+    nav-bar strip — clipped, with its lower half untappable.
+
+    It also did not grow with the OS font size, so the Devanagari and Gujarati
+    labels — which carry marks above and below the baseline — lost their matras
+    first. Height is now derived from content, insets and the real font scale.
+  */
+  const labelHeight = Math.ceil(16 * Math.min(fontScale, 2));
+  const contentHeight = 30 /* icon pill */ + 2 /* gap */ + labelHeight;
+  const barHeight = contentHeight + 18 + insets.bottom;
 
   return (
     <Tabs.Navigator
@@ -36,9 +56,9 @@ export function MainTabs() {
           backgroundColor: theme.surface,
           borderTopWidth: 1,
           borderTopColor: theme.border,
-          height: Platform.OS === 'ios' ? 88 : 68,
+          height: barHeight,
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          paddingBottom: insets.bottom + 10,
           elevation: 0,
           shadowOpacity: isDark ? 0 : 0.05,
           shadowRadius: 12,
@@ -52,9 +72,9 @@ export function MainTabs() {
         component={AwarenessStack}
         options={{
           title: t('tabs.awareness'),
-          tabBarAccessibilityLabel: 'Awareness — learn and ask questions anonymously',
+          tabBarAccessibilityLabel: t('tabs.awarenessHint'),
           tabBarIcon: tabIcon('sparkle'),
-          tabBarLabel: tabLabel(t('tabs.awareness')),
+          tabBarLabel: tabLabel(t('tabs.awareness'), labelHeight),
         }}
       />
       <Tabs.Screen
@@ -62,9 +82,9 @@ export function MainTabs() {
         component={JourneyStack}
         options={{
           title: t('tabs.myJourney'),
-          tabBarAccessibilityLabel: 'My Journey — treatment, medication and coaching',
+          tabBarAccessibilityLabel: t('tabs.myJourneyHint'),
           tabBarIcon: tabIcon('heart'),
-          tabBarLabel: tabLabel(t('tabs.myJourney')),
+          tabBarLabel: tabLabel(t('tabs.myJourney'), labelHeight),
         }}
       />
       <Tabs.Screen
@@ -72,9 +92,9 @@ export function MainTabs() {
         component={VigilanceStack}
         options={{
           title: t('tabs.stayingWell'),
-          tabBarAccessibilityLabel: 'Staying Well — life after treatment',
+          tabBarAccessibilityLabel: t('tabs.stayingWellHint'),
           tabBarIcon: tabIcon('shield'),
-          tabBarLabel: tabLabel(t('tabs.stayingWell')),
+          tabBarLabel: tabLabel(t('tabs.stayingWell'), labelHeight),
         }}
       />
     </Tabs.Navigator>
@@ -104,12 +124,27 @@ function tabIcon(name: IconName) {
   return render;
 }
 
-function tabLabel(label: string) {
+/**
+ * `lineHeight` has to be passed in rather than inherited: the caption variant
+ * fixes it at 16px, and React Native scales `fontSize` by the OS font scale but
+ * never an explicit `lineHeight`. At "Largest" that put a 22px Devanagari glyph
+ * in a 16px box and cropped the matras off `स्वस्थ रहें`.
+ */
+function tabLabel(label: string, lineHeight: number) {
   const render = ({ color, focused }: { color: string; focused: boolean }) => (
     <Text
       numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.85}
       variant="caption"
-      style={{ color, fontWeight: focused ? '700' : '500', fontSize: 11, marginTop: 2 }}
+      style={{
+        color,
+        fontWeight: focused ? '700' : '500',
+        fontSize: 11,
+        lineHeight,
+        marginTop: 2,
+        textAlign: 'center',
+      }}
     >
       {label}
     </Text>

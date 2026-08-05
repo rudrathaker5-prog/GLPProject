@@ -29,7 +29,7 @@ export const palette = {
     800: '#0d5e3f',
     900: '#0c4d35',
   },
-  warn: { 100: '#fdf1d6', 400: '#f2b544', 600: '#b97b0d' },
+  warn: { 100: '#fdf1d6', 400: '#f2b544', 600: '#8a5b0a' },
   danger: { 100: '#fde3e3', 400: '#f0666a', 600: '#c62c30' },
   neutral: {
     0: '#ffffff',
@@ -76,10 +76,13 @@ export const lightTheme: AppTheme = {
   border: '#e1e8f2',
   text: '#0d1b2a',
   textSoft: '#405066',
-  textMuted: '#7b8aa0',
+  textMuted: '#5f7086',
   primary: palette.brand[600],
   primarySoft: palette.brand[50],
-  accent: palette.vital[500],
+  // vital[600], not [500]: accent draws the weight sparkline on a white card,
+  // and a graphical object needs 3:1. vital[500] is 2.58:1 — the app's main
+  // progress chart was below the threshold. This is 3.84:1.
+  accent: palette.vital[600],
   accentSoft: palette.vital[50],
   warning: palette.warn[600],
   warningSoft: palette.warn[100],

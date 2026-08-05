@@ -7,6 +7,7 @@ import { Text } from './Text';
 
 export { Button } from './Button';
 export { Card, CardHeader, SectionTitle } from './Card';
+export { IconButton } from './IconButton';
 export { Screen } from './Screen';
 export { Text } from './Text';
 

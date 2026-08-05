@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { AllParamList } from '@/app/navigation/types';
@@ -11,7 +11,7 @@ import { getProfile } from '@features/profile/api/profileRepository';
 import { PRIMARY_DOCTORS } from '@features/doctors/api/fallbackDirectory';
 import { callNumber } from '@integrations/communication/communicationAdapter';
 import { useTranslation } from '@i18n/useTranslation';
-import { Button, Card, Row, SectionTitle, Text } from '@ui/components';
+import { Button, Card, IconButton, Row, SectionTitle, Text } from '@ui/components';
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
@@ -55,26 +55,24 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
             <Text variant="caption">{t('tabs.myJourney')}</Text>
             <Text variant="display">Getting ready</Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
+          <IconButton
+            name="profile"
             accessibilityLabel={t('tabs.profile')}
             onPress={() => navigation.navigate('Profile')}
-            className="mr-3"
-          >
-            <Icon name="profile" size={22} color={theme.textSoft} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
+            color={theme.textSoft}
+            className="mr-4"
+          />
+          <IconButton
+            name="settings"
             accessibilityLabel={t('settings.title')}
             onPress={() => navigation.navigate('Settings')}
-          >
-            <Icon name="settings" size={22} color={theme.textSoft} />
-          </Pressable>
+            color={theme.textSoft}
+          />
         </View>
 
         <View className="px-5 pt-4">
           <LinearGradient
-            colors={isDark ? ['#0b774c', '#17438c'] : ['#17b871', '#1a63dd']}
+            colors={isDark ? ['#0b774c', '#17438c'] : ['#0a8a55', '#1a63dd']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{ borderRadius: 24, padding: 20 }}

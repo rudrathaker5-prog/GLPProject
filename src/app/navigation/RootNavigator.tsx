@@ -18,6 +18,7 @@ import { DoctorAppointmentsScreen } from '@features/doctorPortal/screens/DoctorA
 import { DoctorProfileScreen } from '@features/doctorPortal/screens/DoctorProfileScreen';
 import { PatientsScreen } from '@features/doctorPortal/screens/PatientsScreen';
 import { AboutScreen } from '@features/settings/screens/AboutScreen';
+import { useTranslation } from '@i18n/useTranslation';
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
@@ -124,6 +125,7 @@ function DoctorPortal() {
 
 export function RootNavigator() {
   const { theme, isDark } = useTheme();
+  const { t } = useTranslation();
   const mode = useAuthStore((s) => s.mode);
   const initialised = useAuthStore((s) => s.initialised);
 
@@ -182,7 +184,7 @@ export function RootNavigator() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'Your account',
+            title: t('screens.account'),
             headerTintColor: theme.text,
             headerStyle: { backgroundColor: theme.surface },
           }}
@@ -200,7 +202,7 @@ export function RootNavigator() {
           component={AboutScreen}
           options={{
             headerShown: true,
-            title: 'About',
+            title: t('screens.about'),
             headerTintColor: theme.text,
             headerStyle: { backgroundColor: theme.surface },
           }}

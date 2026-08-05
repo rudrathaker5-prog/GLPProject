@@ -27,6 +27,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  IconButton,
   ProgressBar,
   Row,
   SectionTitle,
@@ -114,29 +115,26 @@ export function DashboardScreen() {
             <Text variant="display">{profile.data?.displayName ?? t('treatment.todayTitle')}</Text>
           </View>
           <Row>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Notifications"
+            <IconButton
+              name="bell"
+              accessibilityLabel={t('notifications.title')}
               onPress={() => navigation.navigate('Notifications')}
-              className="mr-3"
-            >
-              <Icon name="bell" size={22} color={theme.textSoft} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
+              color={theme.textSoft}
+              className="mr-4"
+            />
+            <IconButton
+              name="profile"
               accessibilityLabel={t('tabs.profile')}
               onPress={() => navigation.navigate('Profile')}
-              className="mr-3"
-            >
-              <Icon name="profile" size={22} color={theme.textSoft} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
+              color={theme.textSoft}
+              className="mr-4"
+            />
+            <IconButton
+              name="settings"
               accessibilityLabel={t('settings.title')}
               onPress={() => navigation.navigate('Settings')}
-            >
-              <Icon name="settings" size={22} color={theme.textSoft} />
-            </Pressable>
+              color={theme.textSoft}
+            />
           </Row>
         </View>
 
@@ -167,7 +165,7 @@ export function DashboardScreen() {
               onPress={() => navigation.navigate('Refill', { medicationId: medication.id })}
             >
               <Row>
-                <Icon name="warning" size={20} color="#b97b0d" />
+                <Icon name="warning" size={20} color="#8a5b0a" />
                 <Text variant="subheading" className="ml-2 flex-1">
                   {medication.name} runs out in {days} day{days === 1 ? '' : 's'}
                 </Text>

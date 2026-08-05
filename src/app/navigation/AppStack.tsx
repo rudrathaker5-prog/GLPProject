@@ -36,6 +36,7 @@ import { JourneyHomeScreen } from '@features/treatment/screens/JourneyHomeScreen
 import { AchievementsScreen } from '@features/vigilance/screens/AchievementsScreen';
 import { RelapsePlanScreen } from '@features/vigilance/screens/RelapsePlanScreen';
 import { VigilanceHomeScreen } from '@features/vigilance/screens/VigilanceHomeScreen';
+import { useTranslation } from '@i18n/useTranslation';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
 import type { AppStackParamList } from './types';
@@ -57,6 +58,10 @@ export function AppStack({
   initialRouteName: keyof AppStackParamList;
 }) {
   const { theme } = useTheme();
+  // Header titles are the most visible text in the app after the tab bar, and
+  // they were all hardcoded English — a Gujarati patient got a Gujarati AI
+  // reply under a header reading "Log weight".
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -89,105 +94,105 @@ export function AppStack({
       />
 
       {/* Conversation */}
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Saathi' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: t('screens.chat') }} />
 
       {/* Awareness */}
       <Stack.Screen
         name="EligibilityChecker"
         component={EligibilityCheckerScreen}
-        options={{ title: 'Eligibility check' }}
+        options={{ title: t('screens.eligibility') }}
       />
-      <Stack.Screen name="Learn" component={LearnScreen} options={{ title: 'Learn' }} />
+      <Stack.Screen name="Learn" component={LearnScreen} options={{ title: t('screens.learn') }} />
       <Stack.Screen name="EducationTopic" component={EducationTopicScreen} options={{ title: '' }} />
-      <Stack.Screen name="Myths" component={MythsScreen} options={{ title: 'Myths vs facts' }} />
+      <Stack.Screen name="Myths" component={MythsScreen} options={{ title: t('screens.myths') }} />
       <Stack.Screen name="MythDetail" component={MythDetailScreen} options={{ title: '' }} />
 
       {/* Care team */}
-      <Stack.Screen name="Doctors" component={DoctorsScreen} options={{ title: 'Talk to a doctor' }} />
-      <Stack.Screen name="DoctorDetail" component={DoctorDetailScreen} options={{ title: 'Doctor' }} />
+      <Stack.Screen name="Doctors" component={DoctorsScreen} options={{ title: t('screens.doctors') }} />
+      <Stack.Screen name="DoctorDetail" component={DoctorDetailScreen} options={{ title: t('screens.doctor') }} />
       <Stack.Screen
         name="BookAppointment"
         component={BookAppointmentScreen}
-        options={{ title: 'Book appointment' }}
+        options={{ title: t('screens.bookAppointment') }}
       />
       <Stack.Screen
         name="Appointments"
         component={AppointmentsScreen}
-        options={{ title: 'Appointments' }}
+        options={{ title: t('screens.appointments') }}
       />
       <Stack.Screen
         name="AppointmentDetail"
         component={AppointmentDetailScreen}
-        options={{ title: 'Appointment' }}
+        options={{ title: t('screens.appointment') }}
       />
 
       {/* Treatment */}
-      <Stack.Screen name="Medication" component={MedicationScreen} options={{ title: 'Medication' }} />
+      <Stack.Screen name="Medication" component={MedicationScreen} options={{ title: t('screens.medication') }} />
       <Stack.Screen
         name="MedicationDetail"
         component={MedicationDetailScreen}
-        options={{ title: 'Medicine' }}
+        options={{ title: t('screens.medicine') }}
       />
       <Stack.Screen
         name="AddMedication"
         component={AddMedicationScreen}
-        options={{ title: 'Add medicine' }}
+        options={{ title: t('screens.addMedicine') }}
       />
       <Stack.Screen
         name="PrescriptionUpload"
         component={PrescriptionUploadScreen}
-        options={{ title: 'Prescription' }}
+        options={{ title: t('screens.prescription') }}
       />
-      <Stack.Screen name="Refill" component={RefillScreen} options={{ title: 'Refill' }} />
-      <Stack.Screen name="LogWeight" component={LogWeightScreen} options={{ title: 'Log weight' }} />
-      <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ title: 'Check-in' }} />
-      <Stack.Screen name="Progress" component={ProgressScreen} options={{ title: 'Progress' }} />
-      <Stack.Screen name="JourneyMap" component={JourneyScreen} options={{ title: 'Journey map' }} />
-      <Stack.Screen name="Nutrition" component={NutritionScreen} options={{ title: 'Nutrition' }} />
+      <Stack.Screen name="Refill" component={RefillScreen} options={{ title: t('screens.refill') }} />
+      <Stack.Screen name="LogWeight" component={LogWeightScreen} options={{ title: t('screens.logWeight') }} />
+      <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ title: t('screens.checkIn') }} />
+      <Stack.Screen name="Progress" component={ProgressScreen} options={{ title: t('screens.progress') }} />
+      <Stack.Screen name="JourneyMap" component={JourneyScreen} options={{ title: t('screens.journeyMap') }} />
+      <Stack.Screen name="Nutrition" component={NutritionScreen} options={{ title: t('screens.nutrition') }} />
       <Stack.Screen
         name="DoctorNotes"
         component={DoctorNotesScreen}
-        options={{ title: 'Doctor notes' }}
+        options={{ title: t('screens.doctorNotes') }}
       />
       <Stack.Screen
         name="DoctorNoteDetail"
         component={DoctorNoteDetailScreen}
-        options={{ title: 'Note' }}
+        options={{ title: t('screens.note') }}
       />
       <Stack.Screen
         name="PeerSupport"
         component={PeerSupportScreen}
-        options={{ title: 'Peer support' }}
+        options={{ title: t('screens.peerSupport') }}
       />
-      <Stack.Screen name="PeerGroup" component={PeerGroupScreen} options={{ title: 'Group' }} />
+      <Stack.Screen name="PeerGroup" component={PeerGroupScreen} options={{ title: t('screens.group') }} />
 
       {/* Vigilance */}
       <Stack.Screen
         name="RelapsePlan"
         component={RelapsePlanScreen}
-        options={{ title: 'Relapse prevention' }}
+        options={{ title: t('screens.relapsePrevention') }}
       />
       <Stack.Screen
         name="Achievements"
         component={AchievementsScreen}
-        options={{ title: 'Achievements' }}
+        options={{ title: t('screens.achievements') }}
       />
 
       {/* Account & settings */}
-      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: t('screens.profile') }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t('screens.settings') }} />
       <Stack.Screen
         name="AiSettings"
         component={AiSettingsScreen}
-        options={{ title: 'AI settings' }}
+        options={{ title: t('screens.aiSettings') }}
       />
       <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Reminders' }}
+        options={{ title: t('screens.reminders') }}
       />
-      <Stack.Screen name="Devices" component={DevicesScreen} options={{ title: 'Devices' }} />
-      <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
+      <Stack.Screen name="Devices" component={DevicesScreen} options={{ title: t('screens.devices') }} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: t('screens.about') }} />
     </Stack.Navigator>
   );
 }

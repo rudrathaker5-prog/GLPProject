@@ -3,7 +3,7 @@ import { Modal, Pressable, View } from 'react-native';
 import type { LanguageCode } from '@core/domain/types';
 import { SUPPORTED_LANGUAGES } from '@i18n/index';
 import { useTranslation } from '@i18n/useTranslation';
-import { Row, Text } from '@ui/components';
+import { IconButton, Row, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
@@ -30,13 +30,23 @@ export function LanguagePicker({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable
+        accessible={false}
         accessibilityRole="button"
         accessibilityLabel={t('common.close')}
         onPress={onClose}
         style={{ flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' }}
       >
-        <Pressable
-          onPress={(event) => event.stopPropagation()}
+        {/*
+          A View, not a Pressable. `Pressable` defaults to accessible={true},
+          which collapses its whole subtree into one node — so the four language
+          options and the close button became a single unlabelled element, and
+          the control the app's four-language promise rests on was unusable with
+          TalkBack or VoiceOver. The sheet does not need to be pressable; it only
+          needed to stop taps reaching the overlay behind it, which a plain View
+          already does.
+        */}
+        <View
+          accessibilityViewIsModal
           style={{
             backgroundColor: theme.surface,
             borderTopLeftRadius: 28,
@@ -48,9 +58,12 @@ export function LanguagePicker({
         >
           <Row className="mb-4 justify-between">
             <Text variant="heading">{t('settings.language')}</Text>
-            <Pressable accessibilityRole="button" onPress={onClose}>
-              <Icon name="close" size={22} color={theme.textMuted} />
-            </Pressable>
+            <IconButton
+              name="close"
+              accessibilityLabel={t('common.close')}
+              onPress={onClose}
+              color={theme.textMuted}
+            />
           </Row>
 
           {SUPPORTED_LANGUAGES.map((option) => {
@@ -59,6 +72,7 @@ export function LanguagePicker({
               <Pressable
                 key={option.code}
                 accessibilityRole="radio"
+                accessibilityLabel={`${option.nativeName} (${option.englishName})`}
                 accessibilityState={{ selected }}
                 onPress={() => choose(option.code)}
                 className={`mb-2 flex-row items-center justify-between rounded-2xl border px-4 py-3.5 ${
@@ -77,9 +91,9 @@ export function LanguagePicker({
           })}
 
           <Text variant="caption" className="mt-2">
-            Your care coach replies in the language you choose here.
+            {t('settings.languageNote')}
           </Text>
-        </Pressable>
+        </View>
       </Pressable>
     </Modal>
   );

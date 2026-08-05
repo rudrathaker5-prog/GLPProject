@@ -35,7 +35,7 @@ module.exports = {
         warn: {
           100: '#fdf1d6',
           400: '#f2b544',
-          600: '#b97b0d',
+          600: '#8a5b0a',
         },
         danger: {
           100: '#fde3e3',
@@ -45,7 +45,7 @@ module.exports = {
         ink: {
           DEFAULT: '#0d1b2a',
           soft: '#405066',
-          muted: '#7b8aa0',
+          muted: '#5f7086',
         },
         surface: {
           DEFAULT: '#ffffff',

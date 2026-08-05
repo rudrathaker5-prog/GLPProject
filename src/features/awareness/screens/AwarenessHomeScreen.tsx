@@ -15,7 +15,7 @@ import { MYTHS } from '@features/awareness/content/myths';
 import { CallDoctorCard } from '@features/doctors/components/CallDoctorCard';
 import { LanguagePicker } from '@features/settings/components/LanguagePicker';
 import { useTranslation } from '@i18n/useTranslation';
-import { Badge, Button, Card, Row, SectionTitle, Text } from '@ui/components';
+import { Badge, Button, Card, IconButton, Row, SectionTitle, Text } from '@ui/components';
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
@@ -69,21 +69,19 @@ export function AwarenessHomeScreen() {
                 {language}
               </Text>
             </Pressable>
-            <Pressable
-              accessibilityRole="button"
+            <IconButton
+              name="profile"
               accessibilityLabel={t('tabs.profile')}
               onPress={() => navigation.navigate('Profile')}
-              className="mr-3"
-            >
-              <Icon name="profile" size={22} color={theme.textSoft} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
+              color={theme.textSoft}
+              className="mr-4"
+            />
+            <IconButton
+              name="settings"
               accessibilityLabel={t('settings.title')}
               onPress={() => navigation.navigate('Settings')}
-            >
-              <Icon name="settings" size={22} color={theme.textSoft} />
-            </Pressable>
+              color={theme.textSoft}
+            />
           </Row>
         </View>
 
@@ -96,7 +94,7 @@ export function AwarenessHomeScreen() {
         {/* Conversational AI card — the primary interface */}
         <View className="px-5 pt-2">
           <LinearGradient
-            colors={isDark ? ['#17438c', '#0b774c'] : ['#1a63dd', '#17b871']}
+            colors={isDark ? ['#17438c', '#0b774c'] : ['#1a63dd', '#0a8a55']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{ borderRadius: 24, padding: 20 }}
@@ -330,7 +328,7 @@ function ActionTile({
   const colours = {
     brand: { bg: 'bg-brand-50 dark:bg-brand-900/30', icon: '#1a63dd' },
     vital: { bg: 'bg-vital-50 dark:bg-vital-900/30', icon: '#0b955c' },
-    warn: { bg: 'bg-warn-100 dark:bg-amber-900/25', icon: '#b97b0d' },
+    warn: { bg: 'bg-warn-100 dark:bg-amber-900/25', icon: '#8a5b0a' },
   }[tone];
 
   return (

@@ -306,7 +306,7 @@ function ResultCard({
                 <Icon
                   name={result.waistFlag ? 'warning' : 'check'}
                   size={16}
-                  color={result.waistFlag ? '#b97b0d' : '#0b955c'}
+                  color={result.waistFlag ? '#8a5b0a' : '#0b955c'}
                 />
                 <Text variant="caption" className="ml-2 flex-1">
                   {result.waistFlag

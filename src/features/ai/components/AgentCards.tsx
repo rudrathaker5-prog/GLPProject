@@ -310,7 +310,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           }
         >
           <Row className="mb-1">
-            <Icon name="warning" size={20} color={card.severity === 'urgent' ? '#c62c30' : '#b97b0d'} />
+            <Icon name="warning" size={20} color={card.severity === 'urgent' ? '#c62c30' : '#8a5b0a'} />
             <Text variant="subheading" className="ml-2">
               {card.severity === 'urgent' ? 'Get medical help now' : 'Please contact your doctor'}
             </Text>
