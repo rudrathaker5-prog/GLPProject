@@ -172,16 +172,22 @@ Crisis routing uses Tele-MANAS (14416) and 112.
 ```bash
 npm run typecheck    # tsc --noEmit, strict, zero errors
 npm run lint         # eslint, zero errors
-npm test             # 79 tests
+npm test             # 142 tests
 npm run bundle:android   # full Metro production bundle
 ```
 
 The test suite covers the parts where being wrong matters: BMI and Indian
 thresholds, eligibility verdicts and contraindications, multilingual safety
 triage, wellness and relapse scoring, adherence, the on-device engine's refusal
-to give dose advice, agent tool-schema integrity, and that **every phone number
-in the directory is a valid dialable number** — because a Call button that does
-nothing is worse than no button at all.
+to give dose advice, agent tool-schema integrity, four-language translation
+parity, and that **every phone number in the directory is a valid dialable
+number** — because a Call button that does nothing is worse than no button at
+all.
+
+It also pins **navigation reachability**: every registered screen must be
+reachable by tapping from a tab root. Two screens had silently become orphans
+(`Profile`, and `Devices` behind it), which meant profile editing, stage
+switching and sign-out shipped in the bundle but could not be opened.
 
 ---
 

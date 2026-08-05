@@ -126,7 +126,12 @@ jobs:
             echo "::warning::No ANDROID_KEYSTORE_BASE64 secret — signed with a throwaway key. Uninstall the previous build before installing this one."
           fi
           cd ..
+          # The generated gradle.properties has NO trailing newline, so a plain
+          # append glues the first property onto the last line and Gradle reads
+          # "android.buildToolsVersion=36.0.0GLPCARE_UPLOAD_STORE_FILE=…".
+          # The leading blank line is what keeps them separate.
           {
+            echo ""
             echo "GLPCARE_UPLOAD_STORE_FILE=release.keystore"
             echo "GLPCARE_UPLOAD_KEY_ALIAS=glpcare"
             echo "GLPCARE_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'glpcare-ci' }}"

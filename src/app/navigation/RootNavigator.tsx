@@ -17,6 +17,7 @@ import { useAuthStore } from '@features/auth/store/authStore';
 import { DoctorAppointmentsScreen } from '@features/doctorPortal/screens/DoctorAppointmentsScreen';
 import { DoctorProfileScreen } from '@features/doctorPortal/screens/DoctorProfileScreen';
 import { PatientsScreen } from '@features/doctorPortal/screens/PatientsScreen';
+import { AboutScreen } from '@features/settings/screens/AboutScreen';
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
@@ -182,6 +183,24 @@ export function RootNavigator() {
             presentation: 'modal',
             headerShown: true,
             title: 'Your account',
+            headerTintColor: theme.text,
+            headerStyle: { backgroundColor: theme.surface },
+          }}
+        />
+        {/*
+          About is registered here as well as in AppStack. The doctor portal is
+          a sibling subtree of Main, and React Navigation only bubbles an
+          unhandled action *up* the tree — never sideways — so the doctor
+          profile's "About this app" button silently did nothing. Patient
+          screens still resolve About in their own stack; only the doctor's
+          navigate bubbles this far.
+        */}
+        <RootStack.Screen
+          name="About"
+          component={AboutScreen}
+          options={{
+            headerShown: true,
+            title: 'About',
             headerTintColor: theme.text,
             headerStyle: { backgroundColor: theme.surface },
           }}

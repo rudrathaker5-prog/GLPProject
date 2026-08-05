@@ -14,7 +14,7 @@ for you.
 3. In the left sidebar, choose **Build Android APK**.
 4. Click **Run workflow** (top right), leave the variant as `release`, click the
    green **Run workflow** button.
-5. Wait 12–20 minutes. The job runs typecheck, lint, 79 tests and a Metro
+5. Wait 12–20 minutes. The job runs typecheck, lint, 142 tests and a Metro
    bundle before it builds, so a green tick means the app actually compiles.
 
 ### Download it

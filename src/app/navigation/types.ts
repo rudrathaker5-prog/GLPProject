@@ -85,6 +85,8 @@ export type RootStackParamList = {
   DoctorPortal: NavigatorScreenParams<DoctorTabParamList>;
   Onboarding: undefined;
   Auth: { mode?: 'sign_in' | 'sign_up' | 'doctor' } | undefined;
+  /** Also in AppStack — registered here so the doctor portal can reach it. */
+  About: undefined;
 };
 
 /**

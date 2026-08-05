@@ -124,6 +124,14 @@ export function DashboardScreen() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={t('tabs.profile')}
+              onPress={() => navigation.navigate('Profile')}
+              className="mr-3"
+            >
+              <Icon name="profile" size={22} color={theme.textSoft} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel={t('settings.title')}
               onPress={() => navigation.navigate('Settings')}
             >
@@ -338,7 +346,20 @@ export function DashboardScreen() {
           ) : null}
 
           {/* Next appointment */}
-          <SectionTitle title={t('treatment.appointments')} />
+          <SectionTitle
+            title={t('treatment.appointments')}
+            action={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('appointments.title')}
+                onPress={() => navigation.navigate('Appointments')}
+              >
+                <Text variant="label" className="text-brand-700 dark:text-brand-200">
+                  {t('common.seeAll')}
+                </Text>
+              </Pressable>
+            }
+          />
           {nextAppointment ? (
             <Card
               onPress={() =>
@@ -390,6 +411,13 @@ export function DashboardScreen() {
             <NavTile icon="chart" label={t('treatment.journeyMap')} onPress={() => navigation.navigate('JourneyMap')} />
             <NavTile icon="refresh" label={t('treatment.refillStatus')} onPress={() => navigation.navigate('Refill', {})} />
             <NavTile icon="people" label={t('treatment.peerSupport')} onPress={() => navigation.navigate('PeerSupport')} />
+            {/*
+              The check-in nudge above only appears after a 3-day gap. Without
+              this tile there is no way to start one in between — someone having
+              a bad week has to wait for the app to ask.
+            */}
+            <NavTile icon="check" label={t('checkin.title')} onPress={() => navigation.navigate('CheckIn', {})} />
+            <NavTile icon="calendar" label={t('appointments.title')} onPress={() => navigation.navigate('Appointments')} />
           </View>
         </View>
       </ScrollView>

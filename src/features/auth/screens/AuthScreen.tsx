@@ -40,6 +40,19 @@ export function AuthScreen() {
   const afterAuth = async () => {
     await migrateLocalProfileToAccount();
     void registerForPush();
+
+    /*
+      A doctor signing in mid-session used to land back in the patient tabs and
+      stay there: the root navigator picks the portal with `initialRouteName`,
+      which is read once at mount, so the portal only appeared after killing and
+      reopening the app. Read the mode set by the sign-in that just completed
+      and reset onto the right subtree.
+    */
+    if (useAuthStore.getState().mode === 'doctor') {
+      navigation.reset({ index: 0, routes: [{ name: 'DoctorPortal' }] });
+      return;
+    }
+
     navigation.goBack();
   };
 

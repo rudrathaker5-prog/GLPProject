@@ -17,16 +17,35 @@ import { supabase } from '@core/supabase/client';
 // Phone
 // ---------------------------------------------------------------------------
 
+/**
+ * Dials a number through the OS dialler.
+ *
+ * Deliberately does **not** gate on `canOpenURL`. Since Android 11 (API 30),
+ * package visibility filtering makes `canOpenURL('tel:…')` answer false on a
+ * phone that dials perfectly well, because the check is a `resolveActivity`
+ * call and the dialler is hidden from us unless declared in `<queries>`. We do
+ * declare it (plugins/withAndroidQueries.js), but a manifest is not something
+ * to bet a doctor's phone number on: firing the intent is not filtered, so we
+ * fire it and only report failure if the OS actually rejects it.
+ *
+ * Returns true when the dialler was opened.
+ */
 export async function callNumber(phone: string | null | undefined): Promise<boolean> {
-  if (!phone) return false;
-  const url = `tel:${phone.replace(/\s/g, '')}`;
-  const supported = await RNLinking.canOpenURL(url);
-  if (!supported) {
-    Alert.alert('Cannot place call', 'This device cannot make phone calls.');
+  const dialable = phone?.replace(/[^\d+*#]/g, '');
+  if (!dialable) return false;
+
+  try {
+    await RNLinking.openURL(`tel:${dialable}`);
+    return true;
+  } catch {
+    // Genuinely no dialler — a tablet, an emulator, or a locked-down device.
+    // Show the number so it can still be written down or dialled elsewhere.
+    Alert.alert(
+      'Could not open the dialler',
+      `This device cannot place calls. The number is ${phone}.`,
+    );
     return false;
   }
-  await RNLinking.openURL(url);
-  return true;
 }
 
 // ---------------------------------------------------------------------------

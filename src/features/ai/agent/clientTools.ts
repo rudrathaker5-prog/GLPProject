@@ -379,10 +379,36 @@ function escalate(args: Args): ToolResult {
   };
 }
 
+/**
+ * The intents the action card knows how to handle. An LLM can emit anything,
+ * and an unrecognised intent used to render a perfectly normal-looking button
+ * whose press fell through the switch in AgentCards and did nothing. Filtering
+ * here means a model that hallucinates an action simply does not get a button.
+ */
+const ACTION_INTENTS: readonly AgentAction['intent'][] = [
+  'open_eligibility',
+  'open_doctors',
+  'book_appointment',
+  'open_education',
+  'open_myths',
+  'start_treatment',
+  'log_weight',
+  'log_checkin',
+  'open_medication',
+  'request_refill',
+  'call_doctor',
+  'open_nutrition',
+  'open_journey',
+];
+
+function isKnownIntent(value: unknown): value is AgentAction['intent'] {
+  return typeof value === 'string' && ACTION_INTENTS.includes(value as AgentAction['intent']);
+}
+
 function suggestActions(args: Args): ToolResult {
   const raw = arr<{ label?: string; intent?: string }>(args.actions).slice(0, 3);
   const actions: AgentAction[] = raw
-    .filter((a) => a.label && a.intent)
+    .filter((a) => Boolean(a.label) && isKnownIntent(a.intent))
     .map((a, i) => ({
       id: `${a.intent}-${i}`,
       label: a.label as string,

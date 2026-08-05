@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { AllParamList } from '@/app/navigation/types';
@@ -9,6 +9,11 @@ import { listAppointments, isUpcoming } from '@features/appointments/api/appoint
 import { CallDoctorCard } from '@features/doctors/components/CallDoctorCard';
 import { getDoctor } from '@features/doctors/api/doctorsRepository';
 import { listMilestones } from '@features/journey/api/journeyRepository';
+import {
+  listScheduledReminders,
+  requestNotificationPermission,
+  scheduleVigilanceFollowUps,
+} from '@features/notifications/service/notificationService';
 import { getProfile } from '@features/profile/api/profileRepository';
 import {
   currentRelapseRisk,
@@ -38,6 +43,7 @@ type Nav = NativeStackNavigationProp<AllParamList>;
  */
 export function VigilanceHomeScreen() {
   const navigation = useNavigation<Nav>();
+  const queryClient = useQueryClient();
   const { theme } = useTheme();
   const { t } = useTranslation();
 
@@ -72,6 +78,45 @@ export function VigilanceHomeScreen() {
 
   const nextCheckpoint = [3, 6, 12].find((m) => (monthsSince ?? 0) < m);
 
+  /*
+    The 3/6/12-month follow-ups used to be armed in exactly one place: choosing
+    "I have finished treatment" during first-run onboarding. Anyone who moved
+    through treatment inside the app and arrived here had no way to schedule
+    them — the checkpoint text below said a follow-up was coming when no
+    notification existed. This reads the real schedule and offers to arm it.
+  */
+  const followUps = useQuery({
+    queryKey: ['vigilanceFollowUps'],
+    queryFn: async () => {
+      const reminders = await listScheduledReminders();
+      return reminders.filter(
+        (r) => r.category === 'checkin' && r.referenceId === 'vigilance' && r.active,
+      );
+    },
+  });
+
+  const armFollowUps = useMutation({
+    mutationFn: async () => {
+      const granted = await requestNotificationPermission();
+      if (!granted) throw new Error('permission');
+      await scheduleVigilanceFollowUps(completedAt ?? new Date());
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vigilanceFollowUps'] });
+      Alert.alert(
+        'Follow-ups scheduled',
+        'You will be reminded at the 3, 6 and 12-month marks. Checkpoints already past are skipped.',
+      );
+    },
+    onError: () =>
+      Alert.alert(
+        'Notifications are off',
+        'Follow-up reminders need notification permission. Turn it on for GLP Care in your phone settings.',
+      ),
+  });
+
+  const followUpsArmed = (followUps.data ?? []).length > 0;
+
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
@@ -88,6 +133,14 @@ export function VigilanceHomeScreen() {
               className="mr-3"
             >
               <Icon name="bell" size={22} color={theme.textSoft} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('tabs.profile')}
+              onPress={() => navigation.navigate('Profile')}
+              className="mr-3"
+            >
+              <Icon name="profile" size={22} color={theme.textSoft} />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -224,7 +277,9 @@ export function VigilanceHomeScreen() {
             </Text>
             {nextCheckpoint ? (
               <Text variant="caption" className="mt-2">
-                Next scheduled follow-up: {nextCheckpoint}-month checkpoint.
+                {followUpsArmed
+                  ? `Next scheduled follow-up: ${nextCheckpoint}-month checkpoint.`
+                  : `Your ${nextCheckpoint}-month checkpoint is not set as a reminder yet.`}
               </Text>
             ) : null}
             <Button
@@ -233,6 +288,16 @@ export function VigilanceHomeScreen() {
               fullWidth
               onPress={() => navigation.navigate('CheckIn', { kind: 'vigilance' })}
             />
+            {nextCheckpoint && !followUpsArmed ? (
+              <Button
+                className="mt-2"
+                label="Remind me at 3, 6 and 12 months"
+                variant="secondary"
+                fullWidth
+                loading={armFollowUps.isPending}
+                onPress={() => armFollowUps.mutate()}
+              />
+            ) : null}
           </Card>
 
           {/* Doctor */}

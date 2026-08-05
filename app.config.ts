@@ -122,6 +122,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-localization',
     'expo-audio',
+    // Android 11+ package visibility: without this the OS hides the dialler,
+    // maps and WhatsApp from us, and every "Call doctor" button reports that
+    // the device cannot make calls. See plugins/withAndroidQueries.js.
+    './plugins/withAndroidQueries',
   ] as ExpoConfig['plugins'],
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,

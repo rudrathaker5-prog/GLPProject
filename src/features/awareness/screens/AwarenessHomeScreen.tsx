@@ -71,6 +71,14 @@ export function AwarenessHomeScreen() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={t('tabs.profile')}
+              onPress={() => navigation.navigate('Profile')}
+              className="mr-3"
+            >
+              <Icon name="profile" size={22} color={theme.textSoft} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel={t('settings.title')}
               onPress={() => navigation.navigate('Settings')}
             >
