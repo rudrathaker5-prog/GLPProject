@@ -1,0 +1,139 @@
+import type { ConfigContext, ExpoConfig } from 'expo/config';
+
+/**
+ * Expo app configuration.
+ *
+ * Every environment-specific value is read from process.env so the same source
+ * tree produces dev / staging / production binaries without code changes.
+ * See `.env.example` and `docs/ENVIRONMENT.md`.
+ */
+const APP_VARIANT = process.env.APP_VARIANT ?? 'production';
+
+const variantConfig = {
+  development: { name: 'GLP Care (Dev)', package: 'in.glpcare.companion.dev' },
+  staging: { name: 'GLP Care (Staging)', package: 'in.glpcare.companion.staging' },
+  production: { name: 'GLP Care', package: 'in.glpcare.companion' },
+} as const;
+
+const variant =
+  variantConfig[APP_VARIANT as keyof typeof variantConfig] ?? variantConfig.production;
+
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: variant.name,
+  slug: 'glp-care-companion',
+  version: '1.0.0',
+  orientation: 'portrait',
+  scheme: 'glpcare',
+  userInterfaceStyle: 'automatic',
+  newArchEnabled: true,
+  primaryColor: '#1a63dd',
+  assetBundlePatterns: ['**/*'],
+  splash: {
+    backgroundColor: '#1a63dd',
+    resizeMode: 'contain',
+  },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: variant.package,
+    buildNumber: '1',
+    infoPlist: {
+      NSMicrophoneUsageDescription:
+        'GLP Care uses the microphone so you can speak with your AI care coach instead of typing.',
+      NSSpeechRecognitionUsageDescription:
+        'Speech recognition converts your spoken questions into text for the AI care coach.',
+      NSCameraUsageDescription:
+        'The camera lets you capture your prescription so reminders can be created automatically.',
+      NSPhotoLibraryUsageDescription:
+        'Attach an existing prescription photo so your medication schedule can be extracted.',
+      NSCalendarsUsageDescription:
+        'Appointments you book are added to your calendar so you never miss a consultation.',
+      NSHealthShareUsageDescription:
+        'Reading steps, weight and sleep from Apple Health personalises your progress tracking.',
+      NSHealthUpdateUsageDescription:
+        'Weight you log in GLP Care can be written back to Apple Health.',
+      UIBackgroundModes: ['remote-notification'],
+    },
+  },
+  android: {
+    package: variant.package,
+    versionCode: 1,
+    adaptiveIcon: {
+      backgroundColor: '#1a63dd',
+    },
+    edgeToEdgeEnabled: true,
+    permissions: [
+      'android.permission.RECORD_AUDIO',
+      'android.permission.CAMERA',
+      'android.permission.READ_CALENDAR',
+      'android.permission.WRITE_CALENDAR',
+      'android.permission.POST_NOTIFICATIONS',
+      'android.permission.SCHEDULE_EXACT_ALARM',
+      'android.permission.VIBRATE',
+      'android.permission.INTERNET',
+      'android.permission.ACCESS_NETWORK_STATE',
+      'com.google.android.gms.permission.ACTIVITY_RECOGNITION',
+    ],
+    intentFilters: [
+      {
+        action: 'VIEW',
+        autoVerify: true,
+        data: [{ scheme: 'glpcare', host: '*' }],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
+  },
+  plugins: [
+    [
+      'expo-build-properties',
+      {
+        android: {
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
+          minSdkVersion: 24,
+          buildToolsVersion: '36.0.0',
+        },
+        ios: { deploymentTarget: '15.1' },
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        color: '#1a63dd',
+        defaultChannel: 'medication-reminders',
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'Attach an existing prescription photo so your medication schedule can be extracted.',
+        cameraPermission:
+          'The camera lets you capture your prescription so reminders can be created automatically.',
+      },
+    ],
+    [
+      'expo-calendar',
+      {
+        calendarPermission:
+          'Appointments you book are added to your calendar so you never miss a consultation.',
+      },
+    ],
+    'expo-secure-store',
+    'expo-localization',
+    'expo-audio',
+  ] as ExpoConfig['plugins'],
+  extra: {
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    aiGatewayUrl: process.env.EXPO_PUBLIC_AI_GATEWAY_URL,
+    aiModel: process.env.EXPO_PUBLIC_AI_MODEL,
+    appVariant: APP_VARIANT,
+    eas: {
+      projectId: process.env.EAS_PROJECT_ID,
+    },
+  },
+  experiments: {
+    typedRoutes: false,
+  },
+});

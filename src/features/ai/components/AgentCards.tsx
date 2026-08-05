@@ -1,0 +1,380 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { View } from 'react-native';
+
+import type { RootStackParamList } from '@/app/navigation/types';
+import type { AgentAction, AgentCard, Doctor } from '@core/domain/types';
+import { Badge, Button, Card, ProgressBar, Row, Text } from '@ui/components';
+import { Icon } from '@ui/components/Icon';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+/**
+ * Renders the structured cards the agent returns alongside its prose.
+ * Every action here navigates to a real screen — the agent never describes a
+ * button that does not exist.
+ */
+export function AgentCardList({ cards }: { cards: AgentCard[] }) {
+  if (!cards.length) return null;
+  return (
+    <View className="mt-3 gap-3">
+      {cards.map((card, index) => (
+        <AgentCardView key={`${card.kind}-${index}`} card={card} />
+      ))}
+    </View>
+  );
+}
+
+function AgentCardView({ card }: { card: AgentCard }) {
+  const navigation = useNavigation<Nav>();
+
+  switch (card.kind) {
+    case 'eligibility': {
+      const { result } = card;
+      const tone =
+        result.verdict === 'likely_eligible'
+          ? 'success'
+          : result.verdict === 'possibly_eligible'
+            ? 'brand'
+            : result.verdict === 'not_advisable'
+              ? 'danger'
+              : 'warning';
+      return (
+        <Card>
+          <Row className="justify-between">
+            <Text variant="subheading">Eligibility indication</Text>
+            <Badge label={verdictLabel(result.verdict)} tone={tone} />
+          </Row>
+          {result.bmi ? (
+            <Text variant="body" className="mt-2">
+              BMI {result.bmi} — {result.bmiCategoryIndian}
+            </Text>
+          ) : null}
+          {result.reasons.slice(0, 3).map((reason) => (
+            <Text key={reason} variant="body" className="mt-1">
+              • {reason}
+            </Text>
+          ))}
+          {result.nextSteps.length ? (
+            <View className="mt-3 rounded-2xl bg-brand-50 p-3 dark:bg-brand-900/30">
+              <Text variant="label" className="mb-1">
+                Next step
+              </Text>
+              <Text variant="body">{result.nextSteps[0]}</Text>
+            </View>
+          ) : null}
+          <Text variant="caption" className="mt-3">
+            {result.disclaimer}
+          </Text>
+        </Card>
+      );
+    }
+
+    case 'doctor_list': {
+      const doctors = card.doctors as Doctor[];
+      return (
+        <Card>
+          <Text variant="subheading" className="mb-2">
+            Doctors who can help
+          </Text>
+          {doctors.slice(0, 3).map((doctor) => (
+            <View
+              key={doctor.id}
+              className="mb-2 rounded-2xl border border-slate-100 p-3 dark:border-slate-700"
+            >
+              <Text variant="bodyStrong">{doctor.fullName}</Text>
+              <Text variant="caption">
+                {doctor.speciality} • {doctor.city}
+                {doctor.consultationFee ? ` • ₹${doctor.consultationFee}` : ''}
+              </Text>
+              <Row className="mt-2 gap-2">
+                <Button
+                  label="View"
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => navigation.navigate('DoctorDetail', { doctorId: doctor.id })}
+                />
+                <Button
+                  label="Book"
+                  size="sm"
+                  onPress={() => navigation.navigate('BookAppointment', { doctorId: doctor.id })}
+                />
+              </Row>
+            </View>
+          ))}
+          {doctors.length === 0 ? (
+            <Text variant="body">
+              No doctors matched. Try another city from the Doctors tab.
+            </Text>
+          ) : null}
+        </Card>
+      );
+    }
+
+    case 'appointment': {
+      const { appointment } = card;
+      return (
+        <Card>
+          <Row className="justify-between">
+            <Text variant="subheading">Appointment confirmed</Text>
+            <Badge label={appointment.mode.replace('_', ' ')} tone="success" />
+          </Row>
+          <Text variant="body" className="mt-2">
+            {new Date(appointment.scheduledAt).toLocaleString('en-IN', {
+              dateStyle: 'full',
+              timeStyle: 'short',
+            })}
+          </Text>
+          <Button
+            className="mt-3"
+            label="View appointment"
+            variant="secondary"
+            onPress={() =>
+              navigation.navigate('AppointmentDetail', { appointmentId: appointment.id })
+            }
+          />
+        </Card>
+      );
+    }
+
+    case 'myth':
+      return (
+        <Card onPress={() => navigation.navigate('MythDetail', { mythId: card.myth.id })}>
+          <Row className="justify-between">
+            <Badge
+              label={
+                card.myth.verdict === 'myth'
+                  ? 'Myth'
+                  : card.myth.verdict === 'fact'
+                    ? 'Fact'
+                    : 'Partly true'
+              }
+              tone={card.myth.verdict === 'myth' ? 'danger' : 'brand'}
+            />
+            <Icon name="chevron" size={18} />
+          </Row>
+          <Text variant="subheading" className="mt-2">
+            {card.myth.myth}
+          </Text>
+          <Text variant="caption" className="mt-1">
+            Tap for the evidence
+          </Text>
+        </Card>
+      );
+
+    case 'education':
+      return (
+        <Card onPress={() => navigation.navigate('EducationTopic', { topicId: card.topic.id })}>
+          <Row className="justify-between">
+            <Text variant="subheading" className="flex-1 pr-2">
+              {card.topic.title}
+            </Text>
+            <Icon name="chevron" size={18} />
+          </Row>
+          <Text variant="body" className="mt-1">
+            {card.topic.summary}
+          </Text>
+          <Text variant="caption" className="mt-2">
+            {card.topic.readMinutes} min read
+          </Text>
+        </Card>
+      );
+
+    case 'checkin_request':
+      return (
+        <Card>
+          <Text variant="subheading">Quick check-in</Text>
+          <Text variant="body" className="mt-1">
+            {card.fields.length} question{card.fields.length === 1 ? '' : 's'} — about a minute.
+          </Text>
+          <Button
+            className="mt-3"
+            label="Start check-in"
+            onPress={() => navigation.navigate('CheckIn', {})}
+          />
+        </Card>
+      );
+
+    case 'wellness':
+      return (
+        <Card>
+          <Text variant="subheading">Wellness score</Text>
+          <Text variant="display" className="mt-1">
+            {card.wellness.score}
+            <Text variant="caption"> / 100</Text>
+          </Text>
+          <ProgressBar
+            value={card.wellness.score}
+            tone={card.wellness.score >= 55 ? 'success' : 'warning'}
+          />
+          <Text variant="caption" className="mt-2 capitalize">
+            {card.wellness.band.replace('_', ' ')}
+          </Text>
+        </Card>
+      );
+
+    case 'relapse':
+      return (
+        <Card className="border-warn-400/40 bg-warn-100/30 dark:bg-amber-900/10">
+          <Row className="justify-between">
+            <Text variant="subheading">Relapse risk</Text>
+            <Badge
+              label={card.risk.band}
+              tone={card.risk.band === 'high' ? 'danger' : card.risk.band === 'moderate' ? 'warning' : 'success'}
+            />
+          </Row>
+          <ProgressBar
+            value={card.risk.score}
+            tone={card.risk.band === 'high' ? 'danger' : 'warning'}
+            label="Risk"
+          />
+          {card.risk.signals.map((signal) => (
+            <Text key={signal} variant="body" className="mt-1">
+              • {signal}
+            </Text>
+          ))}
+          <Text variant="bodyStrong" className="mt-3">
+            {card.risk.recommendation}
+          </Text>
+          <Button
+            className="mt-3"
+            label="Open my prevention plan"
+            variant="secondary"
+            onPress={() => navigation.navigate('RelapsePlan')}
+          />
+        </Card>
+      );
+
+    case 'medication_schedule':
+      return (
+        <Card>
+          <Text variant="subheading" className="mb-2">
+            Your schedule
+          </Text>
+          {card.medications.map((medication) => (
+            <View key={medication.id} className="mb-2">
+              <Text variant="bodyStrong">
+                {medication.name} {medication.strength}
+              </Text>
+              <Text variant="caption">
+                {medication.doseAmount} {medication.doseUnit} • {medication.timesOfDay.join(', ')}
+              </Text>
+            </View>
+          ))}
+          <Button
+            label="Open medication"
+            variant="secondary"
+            onPress={() => navigation.navigate('Medication')}
+          />
+        </Card>
+      );
+
+    case 'nutrition_plan':
+      return (
+        <Card onPress={() => navigation.navigate('Treatment', { screen: 'Nutrition' })}>
+          <Text variant="subheading">Your nutrition targets</Text>
+          <Row className="mt-2 gap-3">
+            <Text variant="body">{card.plan.proteinTargetG} g protein</Text>
+            <Text variant="body">{card.plan.waterTargetLitres} L water</Text>
+          </Row>
+        </Card>
+      );
+
+    case 'action':
+      return (
+        <View className="flex-row flex-wrap gap-2">
+          {card.actions.map((action) => (
+            <ActionButton key={action.id} action={action} />
+          ))}
+        </View>
+      );
+
+    case 'escalation':
+      return (
+        <Card
+          className={
+            card.severity === 'urgent'
+              ? 'border-danger-400 bg-danger-100/50 dark:bg-rose-900/20'
+              : 'border-warn-400 bg-warn-100/40 dark:bg-amber-900/20'
+          }
+        >
+          <Row className="mb-1">
+            <Icon name="warning" size={20} color={card.severity === 'urgent' ? '#c62c30' : '#b97b0d'} />
+            <Text variant="subheading" className="ml-2">
+              {card.severity === 'urgent' ? 'Get medical help now' : 'Please contact your doctor'}
+            </Text>
+          </Row>
+          <Text variant="body">{card.message}</Text>
+          <Button
+            className="mt-3"
+            label="Find a doctor"
+            variant={card.severity === 'urgent' ? 'danger' : 'secondary'}
+            onPress={() => navigation.navigate('Awareness', { screen: 'Doctors' })}
+          />
+        </Card>
+      );
+
+    default:
+      return null;
+  }
+}
+
+function ActionButton({ action }: { action: AgentAction }) {
+  const navigation = useNavigation<Nav>();
+
+  const onPress = () => {
+    switch (action.intent) {
+      case 'open_eligibility':
+        navigation.navigate('EligibilityChecker');
+        break;
+      case 'open_doctors':
+      case 'call_doctor':
+        navigation.navigate('Awareness', { screen: 'Doctors' });
+        break;
+      case 'book_appointment':
+        navigation.navigate('Appointments');
+        break;
+      case 'open_education':
+        navigation.navigate('Awareness', { screen: 'Learn' });
+        break;
+      case 'open_myths':
+        navigation.navigate('Awareness', { screen: 'Myths' });
+        break;
+      case 'start_treatment':
+        navigation.navigate('Onboarding');
+        break;
+      case 'log_weight':
+        navigation.navigate('LogWeight');
+        break;
+      case 'log_checkin':
+        navigation.navigate('CheckIn', {});
+        break;
+      case 'open_medication':
+        navigation.navigate('Medication');
+        break;
+      case 'request_refill':
+        navigation.navigate('Refill', {});
+        break;
+      case 'open_nutrition':
+        navigation.navigate('Treatment', { screen: 'Nutrition' });
+        break;
+      case 'open_journey':
+        navigation.navigate('Treatment', { screen: 'Journey' });
+        break;
+      default:
+        break;
+    }
+  };
+
+  return <Button label={action.label} variant="secondary" size="sm" onPress={onPress} />;
+}
+
+function verdictLabel(verdict: string): string {
+  return {
+    likely_eligible: 'Likely eligible',
+    possibly_eligible: 'Possibly eligible',
+    needs_consultation: 'See a doctor',
+    insufficient_information: 'Need more info',
+    not_advisable: 'Not advisable',
+  }[verdict] ?? verdict;
+}

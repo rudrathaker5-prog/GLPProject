@@ -1,0 +1,1078 @@
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+
+import type { LlmToolDefinition } from './llm.ts';
+import type { Stage } from './prompts.ts';
+
+/**
+ * The agent's action space.
+ *
+ * Every tool either (a) computes something deterministic, (b) reads the
+ * patient's own records through RLS, or (c) writes a record on the patient's
+ * behalf. Writes are deliberately limited to things a patient can already do
+ * themselves in the UI — the agent never performs an action the user could not.
+ */
+
+export interface ToolContext {
+  supabase: SupabaseClient;
+  userId: string | null;
+  conversationId: string | null;
+  stage: Stage;
+  language: string;
+}
+
+export interface ToolResult {
+  /** Returned to the model as the tool message. */
+  forModel: unknown;
+  /** Rendered by the app as a structured card. */
+  card?: Record<string, unknown>;
+}
+
+type ToolHandler = (args: Record<string, any>, ctx: ToolContext) => Promise<ToolResult>;
+
+interface Tool {
+  definition: LlmToolDefinition;
+  /** Stages in which the tool is offered to the model. */
+  stages: Stage[];
+  /** Whether the tool needs an authenticated user. */
+  requiresAuth: boolean;
+  handler: ToolHandler;
+}
+
+// ---------------------------------------------------------------------------
+// Clinical helpers (duplicated intentionally: this file must run standalone in
+// Deno without importing the React Native source tree)
+// ---------------------------------------------------------------------------
+
+function calculateBmi(heightCm?: number | null, weightKg?: number | null): number | null {
+  if (!heightCm || !weightKg || heightCm <= 0) return null;
+  const m = heightCm / 100;
+  return Math.round((weightKg / (m * m)) * 10) / 10;
+}
+
+function bmiCategoryIndian(bmi: number | null): string | null {
+  if (bmi === null) return null;
+  if (bmi < 18.5) return 'Underweight';
+  if (bmi < 23) return 'Normal (Asian-Indian range)';
+  if (bmi < 25) return 'Overweight (Asian-Indian range)';
+  if (bmi < 30) return 'Obesity — class I';
+  if (bmi < 35) return 'Obesity — class II';
+  return 'Obesity — class III';
+}
+
+const DISCLAIMER =
+  'This is educational information based on published Indian and WHO guidance. It is not a prescription, a diagnosis, or medical advice. Only a registered doctor can decide whether any medicine is appropriate for you.';
+
+// ---------------------------------------------------------------------------
+// Tools
+// ---------------------------------------------------------------------------
+
+const checkEligibility: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'check_eligibility',
+      description:
+        'Run the educational eligibility screen for obesity pharmacotherapy using Indian (ICMR) thresholds. Call whenever the user asks whether they qualify, or after they give height and weight in an eligibility conversation. Pass only the values the user actually gave.',
+      parameters: {
+        type: 'object',
+        properties: {
+          height_cm: { type: 'number', description: 'Height in centimetres' },
+          weight_kg: { type: 'number', description: 'Weight in kilograms' },
+          waist_cm: { type: 'number', description: 'Waist circumference in centimetres' },
+          age: { type: 'number' },
+          sex: { type: 'string', enum: ['male', 'female', 'other', 'undisclosed'] },
+          comorbidities: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: [
+                'type2_diabetes',
+                'prediabetes',
+                'hypertension',
+                'dyslipidaemia',
+                'osa',
+                'pcos',
+                'nafld',
+                'osteoarthritis',
+                'cvd',
+                'infertility',
+                'none',
+              ],
+            },
+          },
+          contraindications: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: [
+                'pregnancy',
+                'breastfeeding',
+                'mtc_men2_history',
+                'pancreatitis_history',
+                'type1_diabetes',
+                'severe_gi_disease',
+                'active_eating_disorder',
+                'none',
+              ],
+            },
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  handler: async (args) => {
+    const bmi = calculateBmi(args.height_cm, args.weight_kg);
+    const category = bmiCategoryIndian(bmi);
+    const comorbidities: string[] = (args.comorbidities ?? []).filter((c: string) => c !== 'none');
+    const contraindications: string[] = (args.contraindications ?? []).filter(
+      (c: string) => c !== 'none',
+    );
+
+    const absolute = contraindications.filter((c) =>
+      ['pregnancy', 'breastfeeding', 'mtc_men2_history'].includes(c),
+    );
+    const caution = contraindications.filter((c) =>
+      ['pancreatitis_history', 'type1_diabetes', 'severe_gi_disease', 'active_eating_disorder'].includes(
+        c,
+      ),
+    );
+
+    const waistThreshold = args.sex === 'male' ? 90 : 80;
+    const waistFlag = args.waist_cm ? args.waist_cm >= waistThreshold : null;
+
+    const missing: string[] = [];
+    if (!args.height_cm) missing.push('height');
+    if (!args.weight_kg) missing.push('weight');
+    if (!args.waist_cm) missing.push('waist circumference');
+    if (!args.age) missing.push('age');
+
+    let verdict:
+      | 'likely_eligible'
+      | 'possibly_eligible'
+      | 'needs_consultation'
+      | 'insufficient_information'
+      | 'not_advisable';
+    const reasons: string[] = [];
+    const nextSteps: string[] = [];
+
+    if (absolute.length > 0) {
+      verdict = 'not_advisable';
+      reasons.push(
+        'You reported a situation where weight-loss medicines are not used at all, whatever the BMI.',
+      );
+      nextSteps.push('Talk to your doctor about what is safe for you right now.');
+    } else if (bmi === null) {
+      verdict = 'insufficient_information';
+      reasons.push('I need height and weight before I can say anything useful.');
+      nextSteps.push('Share your height and weight for an indication.');
+    } else if (args.age && args.age < 18) {
+      verdict = 'needs_consultation';
+      reasons.push('Under 18, obesity care runs through a paediatric specialist.');
+      nextSteps.push('Ask for a referral to a paediatric endocrinologist.');
+    } else {
+      reasons.push(`BMI ${bmi} — ${category}.`);
+      if (waistFlag === true) {
+        reasons.push(`Waist is at or above the Indian threshold of ${waistThreshold} cm.`);
+      }
+      if (comorbidities.length) {
+        reasons.push(`Reported conditions: ${comorbidities.join(', ')}.`);
+      }
+      const hasComorbidity = comorbidities.length > 0;
+      if (bmi >= 27.5 || (bmi >= 25 && hasComorbidity)) verdict = 'likely_eligible';
+      else if (bmi >= 25 || (bmi >= 23 && (hasComorbidity || waistFlag === true)))
+        verdict = 'possibly_eligible';
+      else if (bmi >= 23) verdict = 'needs_consultation';
+      else verdict = 'not_advisable';
+
+      if (caution.length > 0 && verdict === 'likely_eligible') verdict = 'needs_consultation';
+
+      nextSteps.push(
+        verdict === 'likely_eligible'
+          ? 'Book a consultation — this is the range where doctors commonly consider medical treatment.'
+          : 'A consultation is the right next step; the decision needs an examination.',
+      );
+    }
+
+    const result = {
+      verdict,
+      bmi,
+      bmiCategoryIndian: category,
+      waistFlag,
+      reasons,
+      missing,
+      nextSteps,
+      guidelineRefs: [
+        'ICMR-NIN Dietary Guidelines for Indians (2024)',
+        'WHO Obesity and overweight fact sheet',
+      ],
+      disclaimer: DISCLAIMER,
+    };
+
+    return { forModel: result, card: { kind: 'eligibility', result } };
+  },
+};
+
+const findDoctors: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'find_doctors',
+      description:
+        'Find obesity/endocrinology doctors near the user. Call when the user asks to see a doctor, asks who can help, or after recommending a consultation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name, if the user has said one' },
+          teleconsult_only: { type: 'boolean' },
+          language: { type: 'string', enum: ['en', 'hi', 'gu', 'mr'] },
+          limit: { type: 'number', default: 5 },
+        },
+        required: [],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    let query = ctx.supabase
+      .from('doctors')
+      .select('*, hospital:hospitals(*)')
+      .eq('accepting_patients', true)
+      .limit(Math.min(args.limit ?? 5, 10));
+
+    if (args.city) query = query.ilike('city', `%${args.city}%`);
+    if (args.teleconsult_only) query = query.eq('teleconsult_available', true);
+
+    const { data, error } = await query;
+    if (error) return { forModel: { error: error.message, doctors: [] } };
+
+    const doctors = data ?? [];
+    return {
+      forModel: {
+        count: doctors.length,
+        doctors: doctors.map((d: any) => ({
+          id: d.id,
+          name: d.full_name,
+          speciality: d.speciality,
+          city: d.city,
+          fee: d.consultation_fee,
+          teleconsult: d.teleconsult_available,
+          languages: d.languages,
+        })),
+      },
+      card: { kind: 'doctor_list', doctors },
+    };
+  },
+};
+
+const recommendConsultation: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'recommend_doctor_consultation',
+      description:
+        'Surface the "Talk to a doctor" pathway with nearby doctors and a booking button. Call whenever the user asks for treatment, medicine or injections, or when a symptom needs clinical assessment.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reason: { type: 'string', description: 'Short reason shown to the user' },
+          urgency: { type: 'string', enum: ['routine', 'soon', 'urgent'], default: 'routine' },
+          city: { type: 'string' },
+        },
+        required: ['reason'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    let query = ctx.supabase
+      .from('doctors')
+      .select('*, hospital:hospitals(*)')
+      .eq('accepting_patients', true)
+      .limit(5);
+    if (args.city) query = query.ilike('city', `%${args.city}%`);
+    const { data } = await query;
+
+    return {
+      forModel: {
+        acknowledged: true,
+        reason: args.reason,
+        urgency: args.urgency ?? 'routine',
+        doctors_shown: data?.length ?? 0,
+      },
+      card: {
+        kind: 'doctor_list',
+        doctors: data ?? [],
+        reason: args.reason,
+        urgency: args.urgency ?? 'routine',
+      },
+    };
+  },
+};
+
+const bookAppointment: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'book_appointment',
+      description:
+        'Book a confirmed appointment slot with a doctor. Only call after the user has explicitly chosen a doctor AND a time. Never guess a time.',
+      parameters: {
+        type: 'object',
+        properties: {
+          doctor_id: { type: 'string' },
+          scheduled_at: { type: 'string', description: 'ISO 8601 timestamp' },
+          mode: { type: 'string', enum: ['in_person', 'video', 'phone'], default: 'in_person' },
+          reason: { type: 'string' },
+        },
+        required: ['doctor_id', 'scheduled_at'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const { data, error } = await ctx.supabase.rpc('book_appointment', {
+      p_doctor: args.doctor_id,
+      p_scheduled_at: args.scheduled_at,
+      p_mode: args.mode ?? 'in_person',
+      p_reason: args.reason ?? null,
+    });
+    if (error) {
+      return {
+        forModel: {
+          booked: false,
+          error: error.message.includes('slot_unavailable')
+            ? 'That slot was taken. Offer the user another time.'
+            : error.message,
+        },
+      };
+    }
+    return {
+      forModel: { booked: true, appointment: data },
+      card: { kind: 'appointment', appointment: data },
+    };
+  },
+};
+
+const getAvailableSlots: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_available_slots',
+      description: 'List free appointment slots for a doctor on a date. Call before offering times.',
+      parameters: {
+        type: 'object',
+        properties: {
+          doctor_id: { type: 'string' },
+          date: { type: 'string', description: 'YYYY-MM-DD' },
+        },
+        required: ['doctor_id', 'date'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const { data, error } = await ctx.supabase.rpc('available_slots', {
+      p_doctor: args.doctor_id,
+      p_date: args.date,
+    });
+    if (error) return { forModel: { error: error.message, slots: [] } };
+    return { forModel: { slots: (data ?? []).slice(0, 12) } };
+  },
+};
+
+const explainMyth: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'explain_myth',
+      description:
+        'Retrieve the evidence card for a common obesity or GLP-1 myth. Call when the user states a myth or asks whether something they heard is true.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'The myth in the user\'s own words' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const q = String(args.query ?? '').toLowerCase();
+    const { data } = await ctx.supabase.from('myth_cards').select('*').limit(50);
+    const cards = data ?? [];
+
+    const scored = cards
+      .map((c: any) => {
+        const haystack = `${c.myth} ${c.tags?.join(' ') ?? ''} ${c.explanation}`.toLowerCase();
+        const score = q
+          .split(/\s+/)
+          .filter((w) => w.length > 3)
+          .reduce((acc, w) => acc + (haystack.includes(w) ? 1 : 0), 0);
+        return { card: c, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const best = scored[0];
+    if (!best || best.score === 0) {
+      return {
+        forModel: {
+          found: false,
+          note: 'No stored card matched. Answer from your own evidence knowledge, carefully and without inventing citations.',
+        },
+      };
+    }
+    return { forModel: { found: true, myth: best.card }, card: { kind: 'myth', myth: best.card } };
+  },
+};
+
+const getEducation: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_education_topic',
+      description:
+        'Retrieve a WHO/ICMR-based education article to show the user. Call when explaining a topic in depth would help.',
+      parameters: {
+        type: 'object',
+        properties: {
+          category: {
+            type: 'string',
+            enum: ['basics', 'nutrition', 'activity', 'behaviour', 'medical', 'long_term', 'safety'],
+          },
+          query: { type: 'string' },
+        },
+        required: [],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    let query = ctx.supabase.from('education_topics').select('*').limit(20);
+    if (args.category) query = query.eq('category', args.category);
+    const { data } = await query;
+    const topics = data ?? [];
+    if (topics.length === 0) return { forModel: { found: false } };
+
+    const q = String(args.query ?? '').toLowerCase();
+    const best =
+      topics.find((t: any) => q && `${t.title} ${t.summary}`.toLowerCase().includes(q.split(' ')[0])) ??
+      topics[0];
+
+    return { forModel: { found: true, topic: best }, card: { kind: 'education', topic: best } };
+  },
+};
+
+const logWeight: Tool = {
+  stages: ['treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'log_weight',
+      description:
+        'Record a weight the user has just told you. Only call with a number the user actually stated.',
+      parameters: {
+        type: 'object',
+        properties: {
+          weight_kg: { type: 'number' },
+          waist_cm: { type: 'number' },
+          recorded_on: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        },
+        required: ['weight_kg'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const { data, error } = await ctx.supabase
+      .from('weight_entries')
+      .upsert(
+        {
+          user_id: ctx.userId!,
+          weight_kg: args.weight_kg,
+          waist_cm: args.waist_cm ?? null,
+          recorded_on: args.recorded_on ?? new Date().toISOString().slice(0, 10),
+          source: 'manual',
+        },
+        { onConflict: 'user_id,recorded_on' },
+      )
+      .select()
+      .single();
+
+    if (error) return { forModel: { logged: false, error: error.message } };
+    return { forModel: { logged: true, entry: data } };
+  },
+};
+
+const requestCheckIn: Tool = {
+  stages: ['treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'request_check_in',
+      description:
+        'Show the user an in-chat check-in form. Call when a passive check-in is due, or when the conversation suggests tracking would help.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fields: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: [
+                'weight',
+                'mood',
+                'appetite',
+                'energy',
+                'sleep',
+                'side_effects',
+                'exercise',
+                'nutrition',
+                'water',
+                'stress',
+                'cravings',
+                'confidence',
+              ],
+            },
+          },
+          reason: { type: 'string' },
+        },
+        required: ['fields'],
+      },
+    },
+  },
+  handler: async (args) => ({
+    forModel: { shown: true, fields: args.fields },
+    card: { kind: 'checkin_request', fields: args.fields, reason: args.reason ?? null },
+  }),
+};
+
+const saveCheckIn: Tool = {
+  stages: ['treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'save_check_in',
+      description:
+        'Persist check-in values the user reported conversationally. Only include values the user actually gave. Scores are 0-10.',
+      parameters: {
+        type: 'object',
+        properties: {
+          weight_kg: { type: 'number' },
+          mood_score: { type: 'number' },
+          appetite_score: { type: 'number' },
+          energy_score: { type: 'number' },
+          sleep_hours: { type: 'number' },
+          sleep_quality: { type: 'number' },
+          stress_score: { type: 'number' },
+          craving_score: { type: 'number' },
+          water_litres: { type: 'number' },
+          exercise_minutes: { type: 'number' },
+          nutrition_adherence: { type: 'number', description: '0-100' },
+          confidence_score: { type: 'number' },
+          side_effects: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                code: { type: 'string' },
+                severity: { type: 'string', enum: ['mild', 'moderate', 'severe'] },
+                note: { type: 'string' },
+              },
+              required: ['code', 'severity'],
+            },
+          },
+          free_text: { type: 'string' },
+        },
+        required: [],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const { data, error } = await ctx.supabase
+      .from('check_ins')
+      .insert({
+        user_id: ctx.userId!,
+        kind: ctx.stage === 'vigilance' ? 'vigilance' : 'passive',
+        weight_kg: args.weight_kg ?? null,
+        mood_score: args.mood_score ?? null,
+        appetite_score: args.appetite_score ?? null,
+        energy_score: args.energy_score ?? null,
+        sleep_hours: args.sleep_hours ?? null,
+        sleep_quality: args.sleep_quality ?? null,
+        stress_score: args.stress_score ?? null,
+        craving_score: args.craving_score ?? null,
+        water_litres: args.water_litres ?? null,
+        exercise_minutes: args.exercise_minutes ?? null,
+        nutrition_adherence: args.nutrition_adherence ?? null,
+        confidence_score: args.confidence_score ?? null,
+        side_effects: args.side_effects ?? [],
+        free_text: args.free_text ?? null,
+      })
+      .select()
+      .single();
+
+    if (error) return { forModel: { saved: false, error: error.message } };
+    if (args.weight_kg) {
+      await ctx.supabase.from('weight_entries').upsert(
+        {
+          user_id: ctx.userId!,
+          weight_kg: args.weight_kg,
+          recorded_on: new Date().toISOString().slice(0, 10),
+          source: 'manual',
+        },
+        { onConflict: 'user_id,recorded_on' },
+      );
+    }
+
+    return {
+      forModel: { saved: true, wellness_score: data?.wellness_score ?? null },
+      card: data?.wellness_score
+        ? {
+            kind: 'wellness',
+            wellness: {
+              score: data.wellness_score,
+              band:
+                data.wellness_score >= 75
+                  ? 'thriving'
+                  : data.wellness_score >= 55
+                    ? 'steady'
+                    : data.wellness_score >= 35
+                      ? 'needs_attention'
+                      : 'at_risk',
+              drivers: [],
+            },
+          }
+        : undefined,
+    };
+  },
+};
+
+const getMedicationSchedule: Tool = {
+  stages: ['treatment'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_medication_schedule',
+      description:
+        'Read the user\'s active medications, next dose and refill position. Call before answering anything about their own doses, timing or refills.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  handler: async (_args, ctx) => {
+    const { data: meds } = await ctx.supabase
+      .from('medications')
+      .select('*')
+      .eq('user_id', ctx.userId!)
+      .eq('active', true);
+
+    const { data: nextDose } = await ctx.supabase
+      .from('dose_events')
+      .select('*')
+      .eq('user_id', ctx.userId!)
+      .eq('status', 'scheduled')
+      .gt('scheduled_for', new Date().toISOString())
+      .order('scheduled_for', { ascending: true })
+      .limit(1);
+
+    const medications = meds ?? [];
+    const refills = await Promise.all(
+      medications.map(async (m: any) => {
+        const { data } = await ctx.supabase.rpc('refill_days_remaining', { p_medication: m.id });
+        return { medication_id: m.id, days_remaining: data };
+      }),
+    );
+
+    return {
+      forModel: {
+        medications: medications.map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          strength: m.strength,
+          dose: `${m.dose_amount} ${m.dose_unit}`,
+          frequency: m.frequency,
+          times: m.times_of_day,
+          storage: m.storage_note,
+          instructions: m.instructions,
+        })),
+        next_dose_at: nextDose?.[0]?.scheduled_for ?? null,
+        refills,
+      },
+      card: medications.length ? { kind: 'medication_schedule', medications } : undefined,
+    };
+  },
+};
+
+const requestRefill: Tool = {
+  stages: ['treatment'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'request_refill',
+      description:
+        'Raise a refill request for a medication through the chosen channel. Only call after the user has chosen a channel.',
+      parameters: {
+        type: 'object',
+        properties: {
+          medication_id: { type: 'string' },
+          channel: {
+            type: 'string',
+            enum: ['hospital_pharmacy', 'nearby_pharmacy', 'home_delivery'],
+          },
+          address_line: { type: 'string' },
+        },
+        required: ['medication_id', 'channel'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const { data, error } = await ctx.supabase
+      .from('refill_requests')
+      .insert({
+        user_id: ctx.userId!,
+        medication_id: args.medication_id,
+        channel: args.channel,
+        address_line: args.address_line ?? null,
+        status: 'requested',
+      })
+      .select()
+      .single();
+    if (error) return { forModel: { requested: false, error: error.message } };
+    return { forModel: { requested: true, refill: data } };
+  },
+};
+
+const getProgress: Tool = {
+  stages: ['treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_progress',
+      description:
+        'Read weight history, adherence and milestones. Call before making any claim about how the user is doing.',
+      parameters: {
+        type: 'object',
+        properties: { days: { type: 'number', default: 90 } },
+        required: [],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const since = new Date(Date.now() - (args.days ?? 90) * 86_400_000).toISOString().slice(0, 10);
+    const [{ data: weights }, { data: milestones }, { data: adherence }] = await Promise.all([
+      ctx.supabase
+        .from('weight_entries')
+        .select('recorded_on, weight_kg')
+        .eq('user_id', ctx.userId!)
+        .gte('recorded_on', since)
+        .order('recorded_on', { ascending: true }),
+      ctx.supabase.from('milestones').select('code, achieved_at, value').eq('user_id', ctx.userId!),
+      ctx.supabase.rpc('medication_adherence', { p_user: ctx.userId!, p_days: 28 }),
+    ]);
+
+    const series = weights ?? [];
+    const first = series[0]?.weight_kg;
+    const last = series[series.length - 1]?.weight_kg;
+
+    return {
+      forModel: {
+        entries: series.length,
+        first_weight_kg: first ?? null,
+        latest_weight_kg: last ?? null,
+        change_kg: first && last ? Math.round((last - first) * 10) / 10 : null,
+        adherence_28d: adherence ?? null,
+        milestones: milestones ?? [],
+      },
+    };
+  },
+};
+
+const getNutritionPlan: Tool = {
+  stages: ['treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_nutrition_plan',
+      description: 'Read the active nutrition plan so advice matches the targets the user was given.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  handler: async (_args, ctx) => {
+    const { data } = await ctx.supabase
+      .from('nutrition_plans')
+      .select('*')
+      .eq('user_id', ctx.userId!)
+      .eq('active', true)
+      .maybeSingle();
+    if (!data) return { forModel: { found: false } };
+    return { forModel: { found: true, plan: data }, card: { kind: 'nutrition_plan', plan: data } };
+  },
+};
+
+const triggerRelapseProtocol: Tool = {
+  stages: ['vigilance', 'treatment'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'trigger_relapse_protocol',
+      description:
+        'Start the relapse-prevention protocol. Call when the user reports binge eating, stopping treatment, weight regain, lost motivation or hopelessness.',
+      parameters: {
+        type: 'object',
+        properties: {
+          signals: { type: 'array', items: { type: 'string' } },
+          severity: { type: 'string', enum: ['early', 'active', 'severe'] },
+        },
+        required: ['signals', 'severity'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    let risk: any = null;
+    if (ctx.userId) {
+      const { data } = await ctx.supabase.rpc('compute_relapse_risk', { p_user: ctx.userId });
+      risk = data;
+      await ctx.supabase.from('journey_events').insert({
+        user_id: ctx.userId,
+        type: 'relapse_alert',
+        title: 'Relapse signals detected',
+        description: args.signals.join('; '),
+        stage: 'vigilance',
+        metadata: { severity: args.severity },
+      });
+    }
+
+    const fallback = {
+      score: args.severity === 'severe' ? 75 : args.severity === 'active' ? 50 : 30,
+      band: args.severity === 'severe' ? 'high' : args.severity === 'active' ? 'moderate' : 'moderate',
+      signals: args.signals,
+      recommendation:
+        args.severity === 'severe'
+          ? 'Book a review with your doctor this week and restart daily logging.'
+          : 'Tighten the basics for two weeks: protein at every meal, 7,000 steps, weekly weigh-in.',
+    };
+
+    const resolved = risk ?? fallback;
+    return {
+      forModel: { protocol_started: true, risk: resolved },
+      card: { kind: 'relapse', risk: resolved },
+    };
+  },
+};
+
+const escalate: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'escalate_to_care',
+      description:
+        'Raise an urgent or routine escalation banner with a direct call/book action. Call for red-flag symptoms or when the user needs a clinician now.',
+      parameters: {
+        type: 'object',
+        properties: {
+          severity: { type: 'string', enum: ['urgent', 'routine'] },
+          message: { type: 'string' },
+        },
+        required: ['severity', 'message'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    if (ctx.userId) {
+      await ctx.supabase.from('notifications').insert({
+        user_id: ctx.userId,
+        category: 'system',
+        title: args.severity === 'urgent' ? 'Urgent: contact care' : 'Please contact your doctor',
+        body: args.message,
+        channel: 'local',
+      });
+    }
+    return {
+      forModel: { escalated: true },
+      card: { kind: 'escalation', severity: args.severity, message: args.message },
+    };
+  },
+};
+
+const rememberFact: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'remember',
+      description:
+        'Store one durable fact about this person for future conversations (a preference, a barrier, a goal, a fear). Use sparingly — only things that will still matter in three months.',
+      parameters: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['preference', 'concern', 'goal', 'fact', 'barrier'] },
+          content: { type: 'string', description: 'At most 25 words' },
+          salience: { type: 'number', description: '0-1' },
+        },
+        required: ['kind', 'content'],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const { error } = await ctx.supabase.from('agent_memories').insert({
+      user_id: ctx.userId!,
+      kind: args.kind,
+      content: String(args.content).slice(0, 240),
+      salience: Math.min(1, Math.max(0, args.salience ?? 0.6)),
+    });
+    return { forModel: { stored: !error } };
+  },
+};
+
+const suggestActions: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'suggest_actions',
+      description:
+        'Offer the user up to three tappable next steps inside the app. Use instead of describing where to tap.',
+      parameters: {
+        type: 'object',
+        properties: {
+          actions: {
+            type: 'array',
+            maxItems: 3,
+            items: {
+              type: 'object',
+              properties: {
+                label: { type: 'string' },
+                intent: {
+                  type: 'string',
+                  enum: [
+                    'open_eligibility',
+                    'open_doctors',
+                    'book_appointment',
+                    'open_education',
+                    'open_myths',
+                    'start_treatment',
+                    'log_weight',
+                    'log_checkin',
+                    'open_medication',
+                    'request_refill',
+                    'call_doctor',
+                    'open_nutrition',
+                    'open_journey',
+                  ],
+                },
+              },
+              required: ['label', 'intent'],
+            },
+          },
+        },
+        required: ['actions'],
+      },
+    },
+  },
+  handler: async (args) => ({
+    forModel: { shown: args.actions?.length ?? 0 },
+    card: {
+      kind: 'action',
+      actions: (args.actions ?? []).slice(0, 3).map((a: any, i: number) => ({
+        id: `${a.intent}-${i}`,
+        label: a.label,
+        intent: a.intent,
+      })),
+    },
+  }),
+};
+
+// ---------------------------------------------------------------------------
+// Registry
+// ---------------------------------------------------------------------------
+
+export const TOOLS: Record<string, Tool> = {
+  check_eligibility: checkEligibility,
+  find_doctors: findDoctors,
+  recommend_doctor_consultation: recommendConsultation,
+  get_available_slots: getAvailableSlots,
+  book_appointment: bookAppointment,
+  explain_myth: explainMyth,
+  get_education_topic: getEducation,
+  log_weight: logWeight,
+  request_check_in: requestCheckIn,
+  save_check_in: saveCheckIn,
+  get_medication_schedule: getMedicationSchedule,
+  request_refill: requestRefill,
+  get_progress: getProgress,
+  get_nutrition_plan: getNutritionPlan,
+  trigger_relapse_protocol: triggerRelapseProtocol,
+  escalate_to_care: escalate,
+  remember: rememberFact,
+  suggest_actions: suggestActions,
+};
+
+export function toolDefinitionsFor(stage: Stage, authenticated: boolean): LlmToolDefinition[] {
+  return Object.values(TOOLS)
+    .filter((t) => t.stages.includes(stage) && (authenticated || !t.requiresAuth))
+    .map((t) => t.definition);
+}
+
+export async function executeTool(
+  name: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolResult> {
+  const tool = TOOLS[name];
+  if (!tool) return { forModel: { error: `Unknown tool ${name}` } };
+  if (tool.requiresAuth && !ctx.userId) {
+    return {
+      forModel: {
+        error: 'This action needs an account. Ask the user whether they want to create one.',
+      },
+    };
+  }
+
+  try {
+    const result = await tool.handler(args, ctx);
+    if (ctx.userId) {
+      await ctx.supabase.from('agent_actions').insert({
+        user_id: ctx.userId,
+        conversation_id: ctx.conversationId,
+        tool_name: name,
+        arguments: args,
+        result: result.forModel as Record<string, unknown>,
+        status: 'succeeded',
+      });
+    }
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (ctx.userId) {
+      await ctx.supabase.from('agent_actions').insert({
+        user_id: ctx.userId,
+        conversation_id: ctx.conversationId,
+        tool_name: name,
+        arguments: args,
+        status: 'failed',
+        error: message,
+      });
+    }
+    return { forModel: { error: message } };
+  }
+}
