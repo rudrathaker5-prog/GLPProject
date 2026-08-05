@@ -76,7 +76,7 @@ export function MedicationScreen() {
         const days = refillDaysRemaining(medication);
         const low = days !== null && days <= medication.refillThresholdDays;
 
-        return (
+        const body = (
           <Card
             key={medication.id}
             className="mb-3"
@@ -125,18 +125,37 @@ export function MedicationScreen() {
                   value={Math.min(100, (days / 30) * 100)}
                   tone={low ? 'danger' : 'success'}
                 />
-                {low ? (
-                  <Button
-                    className="mt-3"
-                    label={t('medication.refillNow')}
-                    size="sm"
-                    onPress={() => navigation.navigate('Refill', { medicationId: medication.id })}
-                  />
-                ) : null}
               </View>
             ) : null}
           </Card>
         );
+
+        /*
+          The refill button sits *outside* the card, not inside it.
+
+          A pressable Card is a Pressable, which defaults to accessible={true}
+          and collapses its whole subtree into a single node — so a button
+          nested in it is unreachable with TalkBack or VoiceOver. This one
+          appears precisely when the medicine is running out, which is the worst
+          moment for it to be invisible to a screen reader.
+        */
+        const card =
+          low && days !== null ? (
+            <View key={medication.id}>
+              {body}
+              <Button
+                className="-mt-1 mb-3"
+                label={t('medication.refillNow')}
+                size="sm"
+                fullWidth
+                onPress={() => navigation.navigate('Refill', { medicationId: medication.id })}
+              />
+            </View>
+          ) : (
+            body
+          );
+
+        return card;
       })}
 
       {upcoming.length > 0 ? (
