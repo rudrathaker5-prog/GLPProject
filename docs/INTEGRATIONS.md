@@ -81,6 +81,13 @@ local notifications still go out.
 Numbers are normalised to E.164 (`normaliseIndianNumber`) so 10-digit Indian
 numbers, `+91` and `091` forms all work.
 
+**Opt-in is a server setting, not a device one.** `notify` and
+`reminder-dispatch` decide delivery from `user_settings.whatsapp_opt_in`, so
+the switch in Settings writes through `src/features/settings/api/settingsRepository.ts`
+rather than only into local storage. With no backend or no account there is
+nothing to write to and no way to deliver, so the switch is disabled and says
+so — turning it on would otherwise have been a control that did nothing.
+
 ### Pharmacy fulfilment
 
 `supabase/functions/pharmacy-order/index.ts`

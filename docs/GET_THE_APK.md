@@ -157,3 +157,9 @@ press *Save and test*. It will tell you exactly what is wrong: wrong key, no
 credit, wrong model name, or rate limited.
 
 **Call buttons do nothing** — this needs a real phone; emulators have no dialler.
+On a real device they always open the dialler: the app fires the `tel:` intent
+directly rather than asking `canOpenURL` first, which on Android 11+ answers
+"no" for a dialler that plainly exists (package visibility filtering). The
+`<queries>` declaration that fixes the capability checks lives in
+`plugins/withAndroidQueries.js` — it is a config plugin because `expo prebuild`
+regenerates `AndroidManifest.xml` on every build.
