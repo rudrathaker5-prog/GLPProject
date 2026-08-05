@@ -243,7 +243,14 @@ export function StatTile({
   return (
     <View
       className={`min-w-[104px] flex-1 rounded-2xl p-3 ${toneClass[tone]}`}
-      accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`}
+      // Without `accessible`, the label on a plain View is ignored and the
+      // label, value and unit are read out as three disconnected fragments —
+      // "Adherence", "82", "%" — instead of one stat.
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}${
+        caption ? `. ${caption}` : ''
+      }`}
     >
       <Text variant="caption" className={toneText[tone]}>
         {label}

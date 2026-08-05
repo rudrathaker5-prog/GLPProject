@@ -349,7 +349,12 @@ function Scale({
               accessibilityState={{ selected }}
               accessibilityLabel={`${label}: ${score} out of 10`}
               onPress={() => onChange(score)}
-              className={`h-8 w-[8%] items-center justify-center rounded-lg ${
+              // Eleven targets have to share one row, so 44dp of width is not
+              // available. Height goes to 44 and the vertical hitSlop plus a
+              // 1px gutter means there is no dead space between them — this is
+              // the app's most-repeated patient input, and it was 26x32.
+              hitSlop={{ top: 6, bottom: 6, left: 1, right: 1 }}
+              className={`mx-px h-11 flex-1 items-center justify-center rounded-lg ${
                 selected ? 'bg-brand-600' : 'bg-slate-100 dark:bg-slate-700'
               }`}
             >

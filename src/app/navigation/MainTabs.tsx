@@ -49,6 +49,9 @@ export function MainTabs() {
       initialRouteName={TAB_FOR_STAGE[stage]}
       screenOptions={{
         headerShown: false,
+        // The manifest uses adjustResize, so without this the bar rides above
+        // the keyboard and steals height from an already-shrunk chat screen.
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textMuted,
         tabBarShowLabel: true,
