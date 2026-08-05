@@ -21,8 +21,14 @@ import {
   refillDaysRemaining,
   requestRefill,
 } from '@features/medication/api/medicationRepository';
+import { listCallLog } from '@features/calls/api/callService';
 import { getActivePlan } from '@features/nutrition/api/nutritionRepository';
-import { saveProfile } from '@features/profile/api/profileRepository';
+import {
+  maintenanceStatus,
+  needsClinicalReview,
+  sideEffectTrend,
+} from '@features/vigilance/api/vigilanceRepository';
+import { getProfile, saveProfile } from '@features/profile/api/profileRepository';
 import {
   currentRelapseRisk,
   logWeight,
@@ -128,6 +134,12 @@ export async function executeClientTool(
         return await getProgress();
       case 'get_nutrition_plan':
         return await nutritionPlan();
+      case 'get_side_effect_trend':
+        return await sideEffects(args);
+      case 'get_call_history':
+        return await callHistory();
+      case 'get_maintenance_status':
+        return await maintenance();
       case 'trigger_relapse_protocol':
         return await relapseProtocol(args);
       case 'escalate_to_care':
@@ -391,6 +403,77 @@ async function getProgress(): Promise<ToolResult> {
       lost_kg: summary.lostKg,
       percent_lost: summary.percentLost,
       entries: summary.entries.length,
+    },
+  };
+}
+
+/**
+ * Side effects across recent check-ins.
+ *
+ * Returns the aggregate, plus which entries meet the "say this to a clinician"
+ * bar, so the model is not left to decide clinical significance for itself.
+ */
+async function sideEffects(args: Args): Promise<ToolResult> {
+  const windowDays = inRange(args.window_days, 7, 365) ?? 60;
+  const trend = await sideEffectTrend(windowDays);
+  const review = needsClinicalReview(trend);
+
+  return {
+    forModel: {
+      window_days: windowDays,
+      reported: trend.map((entry) => ({
+        code: entry.code,
+        times: entry.occurrences,
+        worst: entry.worstSeverity,
+        worsening: entry.worsening,
+        last_reported: entry.lastReportedAt.slice(0, 10),
+      })),
+      worth_clinical_review: review.map((entry) => entry.code),
+      note: review.length
+        ? 'Advise raising the flagged ones with their doctor. Do not suggest stopping or changing the dose.'
+        : 'Nothing here meets the threshold for a call on its own.',
+    },
+  };
+}
+
+/**
+ * Calls already placed.
+ *
+ * The point is negative evidence: telling someone to ring their doctor when
+ * they rang two hours ago is how an assistant loses their trust.
+ */
+async function callHistory(): Promise<ToolResult> {
+  const calls = await listCallLog(20);
+
+  return {
+    forModel: {
+      count: calls.length,
+      calls: calls.map((call) => ({
+        to: call.contactName ?? call.number,
+        kind: call.kind,
+        reason: call.reason,
+        placed_at: call.placedAt,
+        outcome: call.outcomeNote,
+      })),
+      note: 'These are calls started from the app. It records that the dialler opened, not that anyone answered — ask rather than assume the call connected.',
+    },
+  };
+}
+
+/** Where the user stands against their own relapse threshold. */
+async function maintenance(): Promise<ToolResult> {
+  const profile = await getProfile().catch(() => null);
+  const status = await maintenanceStatus(profile?.treatmentCompletedAt ?? null);
+
+  return {
+    forModel: {
+      lowest_weight_kg: status.nadirKg,
+      current_weight_kg: status.currentWeightKg,
+      drift_percent: status.driftPercent,
+      action_weight_kg: status.actionWeightKg,
+      threshold_crossed: status.thresholdCrossed,
+      months_since_completion: status.monthsSinceCompletion,
+      note: 'Drift is measured from their lowest weight, not their starting weight. If the threshold is crossed, point them at the relapse protocol — early and small beats late and large.',
     },
   };
 }

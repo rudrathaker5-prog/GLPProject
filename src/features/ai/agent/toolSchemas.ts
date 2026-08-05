@@ -318,6 +318,49 @@ const SPECS: ToolSpec[] = [
     definition: {
       type: 'function',
       function: {
+        name: 'get_side_effect_trend',
+        // Without this the coach asks "any side effects?" every session and
+        // ignores sixty days of the user already answering that question.
+        description:
+          'Read side effects the user has logged in recent check-ins, aggregated: how often each one came up, how bad it got, and whether it is worsening. Call before answering anything about side effects, tolerability, or whether something is normal — the pattern across weeks is the clinically useful part, and the user cannot see it from the inside.',
+        parameters: obj({
+          window_days: {
+            type: 'number',
+            description: 'How far back to look. Defaults to 60.',
+          },
+        }),
+      },
+    },
+  },
+  {
+    stages: ['awareness', 'treatment', 'vigilance'],
+    definition: {
+      type: 'function',
+      function: {
+        name: 'get_call_history',
+        description:
+          'Read calls the user has placed from inside the app — who, when and why. Call this before telling someone to ring their doctor, so you do not tell a person who called this morning to call. It records that the dialler was opened, not that anyone answered.',
+        parameters: obj({}),
+      },
+    },
+  },
+  {
+    stages: ['vigilance'],
+    definition: {
+      type: 'function',
+      function: {
+        name: 'get_maintenance_status',
+        description:
+          'Read where the user stands against their own relapse action threshold: lowest weight, current weight, drift as a percentage, and whether the threshold has been crossed. Call before discussing regain, maintenance or whether they should be worried. Drift is measured from their lowest weight, not their starting weight.',
+        parameters: obj({}),
+      },
+    },
+  },
+  {
+    stages: ['treatment', 'vigilance'],
+    definition: {
+      type: 'function',
+      function: {
         name: 'get_nutrition_plan',
         description: 'Read the active nutrition plan so advice matches the targets they were given.',
         parameters: obj({}),

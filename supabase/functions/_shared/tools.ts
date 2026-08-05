@@ -1006,6 +1006,170 @@ const suggestActions: Tool = {
 // Registry
 // ---------------------------------------------------------------------------
 
+
+/**
+ * Side effects across recent check-ins, aggregated.
+ *
+ * Runs the same aggregation as `sideEffectTrend()` on the device, but in SQL,
+ * so a conversation gets the same answer whichever engine handled it. The
+ * "worth a call" rule is applied here rather than left to the model, because
+ * clinical significance is not something to delegate to a language model.
+ */
+const getSideEffectTrend: Tool = {
+  stages: ['treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_side_effect_trend',
+      description:
+        'Read side effects the user has logged in recent check-ins, aggregated: how often each one came up, how bad it got, and whether it is worsening. Call before answering anything about side effects, tolerability, or whether something is normal — the pattern across weeks is the clinically useful part, and the user cannot see it from the inside.',
+      parameters: {
+        type: 'object',
+        properties: {
+          window_days: { type: 'number', description: 'How far back to look. Defaults to 60.' },
+        },
+        required: [],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const windowDays =
+      typeof args.window_days === 'number' && args.window_days >= 7 && args.window_days <= 365
+        ? args.window_days
+        : 60;
+
+    const { data, error } = await ctx.supabase.rpc('side_effect_trend', {
+      p_user_id: ctx.userId!,
+      p_window_days: windowDays,
+    });
+    if (error) return { forModel: { error: error.message } };
+
+    const rows = (data ?? []) as {
+      code: string;
+      occurrences: number;
+      worst_severity: string;
+      last_reported: string;
+      worsening: boolean;
+    }[];
+
+    // Same rule as needsClinicalReview() on the device.
+    const review = rows.filter(
+      (row) =>
+        row.worst_severity === 'severe' ||
+        row.worsening ||
+        row.occurrences >= 3 ||
+        row.code === 'severe_abdominal_pain' ||
+        row.code === 'hypoglycaemia',
+    );
+
+    return {
+      forModel: {
+        window_days: windowDays,
+        reported: rows.map((row) => ({
+          code: row.code,
+          times: Number(row.occurrences),
+          worst: row.worst_severity,
+          worsening: row.worsening,
+          last_reported: row.last_reported?.slice(0, 10) ?? null,
+        })),
+        worth_clinical_review: review.map((row) => row.code),
+        note: review.length
+          ? 'Advise raising the flagged ones with their doctor. Do not suggest stopping or changing the dose.'
+          : 'Nothing here meets the threshold for a call on its own.',
+      },
+    };
+  },
+};
+
+/**
+ * Calls the patient already placed.
+ *
+ * Mostly useful as negative evidence: telling someone to ring their doctor when
+ * they rang two hours ago is how an assistant loses their trust.
+ */
+const getCallHistory: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_call_history',
+      description:
+        'Read calls the user has placed from inside the app — who, when and why. Call this before telling someone to ring their doctor, so you do not tell a person who called this morning to call. It records that the dialler was opened, not that anyone answered.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  handler: async (_args, ctx) => {
+    const { data, error } = await ctx.supabase
+      .from('call_log')
+      .select('number, contact_name, kind, reason, placed_at, outcome_note')
+      .eq('user_id', ctx.userId!)
+      .order('placed_at', { ascending: false })
+      .limit(20);
+    if (error) return { forModel: { error: error.message } };
+
+    const rows = data ?? [];
+    return {
+      forModel: {
+        count: rows.length,
+        calls: rows.map((row) => ({
+          to: row.contact_name ?? row.number,
+          kind: row.kind,
+          reason: row.reason,
+          placed_at: row.placed_at,
+          outcome: row.outcome_note,
+        })),
+        note: 'These are calls started from the app. It records that the dialler opened, not that anyone answered — ask rather than assume the call connected.',
+      },
+    };
+  },
+};
+
+/** Where the patient stands against their own relapse action threshold. */
+const getMaintenanceStatus: Tool = {
+  stages: ['vigilance'],
+  requiresAuth: true,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'get_maintenance_status',
+      description:
+        'Read where the user stands against their own relapse action threshold: lowest weight, current weight, drift as a percentage, and whether the threshold has been crossed. Call before discussing regain, maintenance or whether they should be worried. Drift is measured from their lowest weight, not their starting weight.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  handler: async (_args, ctx) => {
+    const { data, error } = await ctx.supabase.rpc('maintenance_status', {
+      p_user_id: ctx.userId!,
+    });
+    if (error) return { forModel: { error: error.message } };
+
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | {
+          nadir_kg: number | null;
+          current_weight_kg: number | null;
+          action_weight_kg: number | null;
+          drift_percent: number | null;
+          threshold_crossed: boolean;
+        }
+      | undefined;
+
+    if (!row) return { forModel: { found: false } };
+
+    return {
+      forModel: {
+        lowest_weight_kg: row.nadir_kg,
+        current_weight_kg: row.current_weight_kg,
+        drift_percent: row.drift_percent,
+        action_weight_kg: row.action_weight_kg,
+        threshold_crossed: row.threshold_crossed,
+        note: 'Drift is measured from their lowest weight, not their starting weight. If the threshold is crossed, point them at the relapse protocol — early and small beats late and large.',
+      },
+    };
+  },
+};
+
 export const TOOLS: Record<string, Tool> = {
   check_eligibility: checkEligibility,
   find_doctors: findDoctors,
@@ -1021,6 +1185,9 @@ export const TOOLS: Record<string, Tool> = {
   request_refill: requestRefill,
   get_progress: getProgress,
   get_nutrition_plan: getNutritionPlan,
+  get_side_effect_trend: getSideEffectTrend,
+  get_call_history: getCallHistory,
+  get_maintenance_status: getMaintenanceStatus,
   trigger_relapse_protocol: triggerRelapseProtocol,
   escalate_to_care: escalate,
   remember: rememberFact,

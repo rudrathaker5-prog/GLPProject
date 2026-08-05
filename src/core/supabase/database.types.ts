@@ -421,6 +421,43 @@ export type UserSettingsRow = {
   updated_at: string;
 }
 
+
+export type CallLogRow = {
+  id: string;
+  user_id: string;
+  number: string;
+  contact_name: string | null;
+  kind: 'doctor' | 'hospital' | 'pharmacy' | 'emergency' | 'crisis_line' | 'other';
+  reason:
+    | 'routine'
+    | 'side_effect'
+    | 'missed_dose'
+    | 'refill'
+    | 'appointment'
+    | 'red_flag'
+    | 'relapse'
+    | 'unknown';
+  /** The dialler opened. Says nothing about whether anyone answered. */
+  dialled: boolean;
+  placed_at: string;
+  outcome_note: string | null;
+  created_at: string;
+}
+
+export type VigilanceCheckpointRow = {
+  id: string;
+  user_id: string;
+  month: number;
+  due_at: string;
+  completed_at: string | null;
+  weight_kg: number | null;
+  /** Percent above the patient's LOWEST recorded weight, not their starting weight. */
+  drift_percent: number | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type PeerGroupRow = {
   id: string;
   name: string;
@@ -561,6 +598,11 @@ export type Database = {
     Tables: {
       profiles: TableDef<ProfileRow, Exclude<keyof ProfileRow, 'id'>>;
       user_settings: TableDef<UserSettingsRow, Exclude<keyof UserSettingsRow, 'user_id'>>;
+      call_log: TableDef<CallLogRow, 'id' | 'created_at' | 'dialled' | 'kind' | 'reason' | 'placed_at'>;
+      vigilance_checkpoints: TableDef<
+        VigilanceCheckpointRow,
+        'id' | 'created_at' | 'updated_at'
+      >;
       hospitals: TableDef<HospitalRow, 'id' | 'created_at'>;
       doctors: TableDef<DoctorRow, 'id' | 'created_at'>;
       pharmacies: TableDef<PharmacyRow, 'id' | 'created_at'>;

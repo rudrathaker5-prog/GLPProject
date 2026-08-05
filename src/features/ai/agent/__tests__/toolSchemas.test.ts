@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { ALL_TOOL_NAMES, toolsForStage } from '../toolSchemas';
 
 /**
@@ -61,31 +64,46 @@ describe('tool schemas', () => {
     }
   });
 
-  it('has no tool the client cannot execute', async () => {
-    // Mirrors the switch in clientTools.ts.
-    const implemented = new Set([
-      'check_eligibility',
-      'find_doctors',
-      'recommend_doctor_consultation',
-      'get_available_slots',
-      'book_appointment',
-      'explain_myth',
-      'get_education_topic',
-      'log_weight',
-      'request_check_in',
-      'save_check_in',
-      'get_medication_schedule',
-      'request_refill',
-      'get_progress',
-      'get_nutrition_plan',
-      'trigger_relapse_protocol',
-      'escalate_to_care',
-      'suggest_actions',
-      'remember',
-    ]);
+  it('has no tool the client cannot execute', () => {
+    /*
+      Read the switch out of clientTools.ts rather than restating it here.
+      A hand-copied list is a test that passes right up until someone adds a
+      tool and forgets to update it — which is precisely the failure it exists
+      to catch. This version cannot drift.
+    */
+    const source = readFileSync(
+      join(__dirname, '..', 'clientTools.ts'),
+      'utf8',
+    );
+    const implemented = new Set(
+      [...source.matchAll(/case '(\w+)':/g)].map((match) => match[1]),
+    );
 
-    for (const name of ALL_TOOL_NAMES) {
-      expect(implemented.has(name)).toBe(true);
-    }
+    expect(implemented.size).toBeGreaterThan(15);
+
+    const advertised = [...ALL_TOOL_NAMES];
+    const unimplemented = advertised.filter((name) => !implemented.has(name));
+    expect(unimplemented).toEqual([]);
+  });
+
+  /*
+    Handled by the client but deliberately not offered to it. The server agent
+    advertises `remember`; the device does not, because memory is written by the
+    app rather than by the model. The switch still answers it so a model that
+    has seen the server's tool list does not get an "unknown tool" error.
+  */
+  const DEFENSIVE_ONLY = new Set(['remember']);
+
+  it('advertises every tool the client implements', () => {
+    // The other direction: a tool the client can run but never offers is dead
+    // code, and usually means a schema was deleted by accident.
+    const source = readFileSync(join(__dirname, '..', 'clientTools.ts'), 'utf8');
+    const implemented = [...source.matchAll(/case '(\w+)':/g)].map((m) => m[1]);
+    const advertised = new Set(ALL_TOOL_NAMES);
+
+    const unadvertised = implemented.filter(
+      (name) => !advertised.has(name) && !DEFENSIVE_ONLY.has(name),
+    );
+    expect(unadvertised).toEqual([]);
   });
 });

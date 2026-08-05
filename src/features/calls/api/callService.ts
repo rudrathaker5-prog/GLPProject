@@ -1,5 +1,6 @@
 import { COLLECTIONS, insert, newId, nowIso, readCollection } from '@core/data/localDb';
 import { CRISIS_RESOURCES_IN } from '@core/clinical/safety';
+import { supabase } from '@core/supabase/client';
 import { currentOwnerId } from '@features/auth/store/authStore';
 import { callNumber } from '@integrations/communication/communicationAdapter';
 
@@ -125,10 +126,30 @@ export async function placeCall(input: PlaceCallInput): Promise<CallLogEntry | n
     outcomeNote: null,
   };
 
+  // Local first, always — the log has to survive a flight-mode call.
   try {
     await insert(COLLECTIONS.callLog, entry);
   } catch {
     // Logging is best-effort. The call is the thing that matters.
+  }
+
+  // Then the server, so a signed-in patient's care team can see it. Failure
+  // here is silent by design: a network problem must never surface as an error
+  // on a screen someone reached because they needed to phone a doctor.
+  if (supabase && entry.userId) {
+    void supabase
+      .from('call_log')
+      .insert({
+        user_id: entry.userId,
+        number: entry.number,
+        contact_name: entry.contactName,
+        kind: entry.kind,
+        reason: entry.reason,
+        dialled: entry.dialled,
+        placed_at: entry.placedAt,
+        outcome_note: entry.outcomeNote,
+      })
+      .then(() => undefined, () => undefined);
   }
 
   return entry;
