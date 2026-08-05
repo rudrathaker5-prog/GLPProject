@@ -45,6 +45,7 @@ export type AppStackParamList = {
   AddMedication: { prescriptionId?: string } | undefined;
   PrescriptionUpload: undefined;
   Refill: { medicationId?: string } | undefined;
+  MissedDose: undefined;
   LogWeight: undefined;
   CheckIn: { kind?: 'passive' | 'weekly' | 'monthly' | 'vigilance' } | undefined;
   Progress: undefined;

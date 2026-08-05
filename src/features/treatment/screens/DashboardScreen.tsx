@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { AllParamList } from '@/app/navigation/types';
@@ -59,9 +59,24 @@ export function DashboardScreen() {
   const markTaken = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'taken' | 'skipped' }) =>
       setDoseStatus(id, status),
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['doses'] });
       void queryClient.invalidateQueries({ queryKey: ['medications'] });
+
+      /*
+        Skipping a dose is the moment someone most needs to know not to double
+        up later — and the moment they are least likely to go looking for it.
+        Offer it here rather than waiting for them to find the button.
+      */
+      if (variables.status === 'skipped') {
+        Alert.alert(t('missedDose.title'), t('missedDose.neverDoubleBody'), [
+          { text: t('common.notNow'), style: 'cancel' },
+          {
+            text: t('dash.whatToDo'),
+            onPress: () => navigation.navigate('MissedDose'),
+          },
+        ]);
+      }
     },
   });
 

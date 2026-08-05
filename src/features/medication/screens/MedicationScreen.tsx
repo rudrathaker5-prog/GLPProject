@@ -200,9 +200,10 @@ export function MedicationScreen() {
             label={t('medication.missedDoseHelp')}
             variant="ghost"
             fullWidth
-            onPress={() =>
-              navigation.navigate('Chat', { initialPrompt: 'I missed a dose. What should I do?' })
-            }
+            // Was routing to chat. The one thing that matters here — do not
+            // double up — should not wait on a model round trip, or depend on
+            // whether an API key is configured.
+            onPress={() => navigation.navigate('MissedDose')}
           />
         </View>
       ) : null}

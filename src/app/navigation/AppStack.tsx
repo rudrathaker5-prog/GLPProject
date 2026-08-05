@@ -19,6 +19,7 @@ import { AddMedicationScreen } from '@features/medication/screens/AddMedicationS
 import { MedicationDetailScreen } from '@features/medication/screens/MedicationDetailScreen';
 import { MedicationScreen } from '@features/medication/screens/MedicationScreen';
 import { PrescriptionUploadScreen } from '@features/medication/screens/PrescriptionUploadScreen';
+import { MissedDoseScreen } from '@features/medication/screens/MissedDoseScreen';
 import { RefillScreen } from '@features/medication/screens/RefillScreen';
 import { NotificationsScreen } from '@features/notifications/screens/NotificationsScreen';
 import { NutritionScreen } from '@features/nutrition/screens/NutritionScreen';
@@ -148,6 +149,11 @@ export function AppStack({
         options={{ title: t('screens.prescription') }}
       />
       <Stack.Screen name="Refill" component={RefillScreen} options={{ title: t('screens.refill') }} />
+      <Stack.Screen
+        name="MissedDose"
+        component={MissedDoseScreen}
+        options={{ title: t('screens.missedDose') }}
+      />
       <Stack.Screen name="LogWeight" component={LogWeightScreen} options={{ title: t('screens.logWeight') }} />
       <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ title: t('screens.checkIn') }} />
       <Stack.Screen name="Progress" component={ProgressScreen} options={{ title: t('screens.progress') }} />

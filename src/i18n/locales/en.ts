@@ -34,6 +34,7 @@ export const en = {
   },
 
   screens: {
+    missedDose: 'Missed dose',
     maintenancePlan: 'Maintenance plan',
     checkpoints: 'Checkpoints',
     sideEffects: 'Side effects',
@@ -174,6 +175,7 @@ export const en = {
   },
 
   dash: {
+    whatToDo: 'What should I do?',
     milestoneReached: 'Milestone reached',
     milestoneTap: 'Tap to see it on your journey.',
     refillSoon: 'Arrange a refill so you do not miss a dose.',
@@ -332,6 +334,32 @@ export const en = {
       severe_abdominal_pain: 'Severe abdominal pain',
       other: 'Other',
     },
+  },
+
+  missedDose: {
+    title: 'You missed a dose',
+    neverDoubleTitle: 'Do not take two doses to catch up',
+    neverDoubleBody: 'Taking a missed dose on top of the next one is the single most common way people end up in hospital on these medicines. Whatever else you do, do not double up.',
+    askSomeone: 'Ask someone who can decide',
+    callTitle: 'Your doctor decides this',
+    callBody: 'How late is too late depends on your medicine, your dose and when your next one is due. That is a clinical decision, and it takes one phone call.',
+    leafletTitle: 'What the patient leaflet says',
+    leafletIntro: 'This is the manufacturer’s general guidance, not advice about your dose. Your doctor’s instructions come first.',
+    weeklyTitle: 'Weekly injections',
+    weeklyBadge: 'Weekly',
+    weeklyBody: 'For weekly GLP-1 injections, the patient information generally says a missed dose can be taken if the next one is still several days away; if your next dose is close, the missed one is skipped and you continue on your usual day. The exact number of days differs between medicines.',
+    weeklySource: 'Source: manufacturer patient information leaflets. Confirm the number of days for your specific medicine with your doctor or pharmacist.',
+    dailyTitle: 'Daily injections or tablets',
+    dailyBadge: 'Daily',
+    dailyBody: 'For daily medicines, the leaflets generally say to skip the missed dose entirely and take the next one at the usual time. Doses are not made up.',
+    dailySource: 'Source: manufacturer patient information leaflets.',
+    whyTitle: 'Why doubling up is dangerous',
+    whyBody: 'These medicines are started low and increased slowly for one reason: side effects scale with how fast the dose rises, not with the dose itself. Two doses close together is a fast rise. Severe nausea, vomiting and dehydration are the usual result, and dehydration is what puts people in hospital.',
+    nextTitle: 'Next',
+    askCoach: 'Ask your care coach',
+    coachPrompt: 'I missed a dose of my weight medicine. What are the general rules, and what should I ask my doctor?',
+    seeSchedule: 'See my schedule',
+    disclaimer: 'General information from manufacturer leaflets. It is not a prescription and does not replace your doctor, who knows your medicine, your dose and your history.',
   },
 
   awareness: {
