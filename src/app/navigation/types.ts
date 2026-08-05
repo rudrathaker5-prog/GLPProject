@@ -57,6 +57,10 @@ export type AppStackParamList = {
 
   // Vigilance
   RelapsePlan: undefined;
+  MaintenancePlan: undefined;
+  Checkpoints: undefined;
+  SideEffects: undefined;
+  CallHistory: undefined;
   Achievements: undefined;
 
   // Account & settings

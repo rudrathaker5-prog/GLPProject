@@ -33,7 +33,11 @@ import { CheckInScreen } from '@features/tracking/screens/CheckInScreen';
 import { LogWeightScreen } from '@features/tracking/screens/LogWeightScreen';
 import { ProgressScreen } from '@features/tracking/screens/ProgressScreen';
 import { JourneyHomeScreen } from '@features/treatment/screens/JourneyHomeScreen';
+import { CallHistoryScreen } from '@features/calls/screens/CallHistoryScreen';
+import { SideEffectsScreen } from '@features/treatment/screens/SideEffectsScreen';
 import { AchievementsScreen } from '@features/vigilance/screens/AchievementsScreen';
+import { CheckpointsScreen } from '@features/vigilance/screens/CheckpointsScreen';
+import { MaintenancePlanScreen } from '@features/vigilance/screens/MaintenancePlanScreen';
 import { RelapsePlanScreen } from '@features/vigilance/screens/RelapsePlanScreen';
 import { VigilanceHomeScreen } from '@features/vigilance/screens/VigilanceHomeScreen';
 import { useTranslation } from '@i18n/useTranslation';
@@ -171,6 +175,26 @@ export function AppStack({
         name="RelapsePlan"
         component={RelapsePlanScreen}
         options={{ title: t('screens.relapsePrevention') }}
+      />
+      <Stack.Screen
+        name="MaintenancePlan"
+        component={MaintenancePlanScreen}
+        options={{ title: t('screens.maintenancePlan') }}
+      />
+      <Stack.Screen
+        name="Checkpoints"
+        component={CheckpointsScreen}
+        options={{ title: t('screens.checkpoints') }}
+      />
+      <Stack.Screen
+        name="SideEffects"
+        component={SideEffectsScreen}
+        options={{ title: t('screens.sideEffects') }}
+      />
+      <Stack.Screen
+        name="CallHistory"
+        component={CallHistoryScreen}
+        options={{ title: t('screens.calls') }}
       />
       <Stack.Screen
         name="Achievements"

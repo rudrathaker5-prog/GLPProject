@@ -232,6 +232,20 @@ export function VigilanceHomeScreen() {
               fullWidth
               onPress={() => navigation.navigate('RelapsePlan')}
             />
+            <Row className="mt-2 gap-2">
+              <Button
+                label={t('vigilanceHome.myPlan')}
+                size="sm"
+                variant="secondary"
+                onPress={() => navigation.navigate('MaintenancePlan')}
+              />
+              <Button
+                label={t('vigilanceHome.myCheckpoints')}
+                size="sm"
+                variant="secondary"
+                onPress={() => navigation.navigate('Checkpoints')}
+              />
+            </Row>
           </Card>
 
           {/* Weight watch */}
@@ -369,11 +383,12 @@ export function VigilanceHomeScreen() {
           </Row>
 
           <SectionTitle title={t('vigilanceHome.warningSigns')} />
-          <Card
-            onPress={() =>
-              navigation.navigate('EducationTopic', { topicId: 'side-effects' })
-            }
-          >
+          {/*
+            Not a pressable Card: it holds its own buttons, and a Pressable
+            collapses its subtree for screen readers, which would make them
+            unreachable. The buttons carry the navigation instead.
+          */}
+          <Card>
             <Row className="justify-between">
               <Row className="flex-1">
                 <Icon name="warning" size={18} color={theme.warning} />
@@ -384,14 +399,35 @@ export function VigilanceHomeScreen() {
               <Icon name="chevron" size={18} color={theme.textMuted} />
             </Row>
             <Text variant="body" className="mt-2">
-              What is expected, what settles, and the few symptoms that need a doctor the same day —
-              even months after stopping treatment.
+              {t('vigilanceHome.adverseEventsBody')}
             </Text>
+            <Row className="mt-3 gap-2">
+              <Button
+                label={t('vigilanceHome.mySideEffects')}
+                size="sm"
+                variant="secondary"
+                onPress={() => navigation.navigate('SideEffects')}
+              />
+              <Button
+                label={t('vigilanceHome.callLog')}
+                size="sm"
+                variant="ghost"
+                onPress={() => navigation.navigate('CallHistory')}
+              />
+            </Row>
+            <Button
+              className="mt-2"
+              label={t('vigilanceHome.readAbout')}
+              size="sm"
+              variant="ghost"
+              fullWidth
+              onPress={() => navigation.navigate('EducationTopic', { topicId: 'side-effects' })}
+            />
           </Card>
 
           <Card
             className="mt-2"
-            onPress={() => navigation.navigate('EducationTopic', { topicId: 'maintenance-plan' })}
+            onPress={() => navigation.navigate('MaintenancePlan')}
           >
             <Row className="justify-between">
               <Row className="flex-1">

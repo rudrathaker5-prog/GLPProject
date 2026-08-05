@@ -116,4 +116,6 @@ export const COLLECTIONS = {
   notifications: 'notifications',
   peerPosts: 'peerPosts',
   deviceConnections: 'deviceConnections',
+  callLog: 'callLog',
+  vigilanceCheckpoints: 'vigilanceCheckpoints',
 } as const;

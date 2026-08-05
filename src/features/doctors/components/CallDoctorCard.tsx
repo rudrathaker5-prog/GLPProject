@@ -3,8 +3,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
 import type { AllParamList } from '@/app/navigation/types';
+import type { CallReason } from '@features/calls/api/callService';
+import { CallButton } from '@features/calls/components/CallButton';
 import { PRIMARY_DOCTORS } from '@features/doctors/api/fallbackDirectory';
-import { callNumber } from '@integrations/communication/communicationAdapter';
+import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Button, Card, Row, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
@@ -13,23 +15,29 @@ import { useTheme } from '@ui/theme/ThemeProvider';
  * One-tap access to a real doctor.
  *
  * Used in every stage — awareness "Talk to a doctor", the treatment dashboard,
- * and the vigilance tab — because a person in trouble should never be more than
- * one tap from a human. Every Call button opens the OS dialler with the number
- * already filled in.
+ * the side-effect screen and the vigilance tab — because a person in trouble
+ * should never be more than one tap from a human.
+ *
+ * `reason` is passed through to the call log so the record says *why* the
+ * patient rang. "Called Dr Sharma" is an event; "called Dr Sharma about a side
+ * effect, twenty minutes after logging severe nausea" is a clinical note.
  */
 export function CallDoctorCard({
-  title = 'Talk to a doctor',
-  subtitle = 'Call now, or book a consultation.',
+  title,
+  subtitle,
   urgent = false,
   compact = false,
+  reason = 'routine',
 }: {
   title?: string;
   subtitle?: string;
   urgent?: boolean;
   compact?: boolean;
+  reason?: CallReason;
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<AllParamList>>();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card className={urgent ? 'border-danger-400 bg-danger-100/40 dark:bg-rose-900/20' : undefined}>
@@ -42,14 +50,14 @@ export function CallDoctorCard({
               color={urgent ? theme.danger : theme.primary}
             />
             <Text variant="subheading" className="ml-2">
-              {title}
+              {title ?? t('callCard.title')}
             </Text>
           </Row>
           <Text variant="body" className="mt-1">
-            {subtitle}
+            {subtitle ?? t('callCard.subtitle')}
           </Text>
         </View>
-        {urgent ? <Badge label="Now" tone="danger" /> : null}
+        {urgent ? <Badge label={t('callCard.now')} tone="danger" /> : null}
       </Row>
 
       <View className="mt-3">
@@ -61,13 +69,13 @@ export function CallDoctorCard({
                 {compact ? doctor.phone : `${doctor.speciality} · ${doctor.phone}`}
               </Text>
             </View>
-            <Button
-              label="Call"
-              size="sm"
+            <CallButton
+              number={doctor.phone}
+              contactName={doctor.fullName}
+              kind="doctor"
+              reason={urgent ? 'red_flag' : reason}
+              label={t('callCard.call')}
               variant={urgent ? 'danger' : 'primary'}
-              accessibilityHint={`Dials ${doctor.phone}`}
-              icon={<Icon name="phone" size={15} color="#ffffff" />}
-              onPress={() => void callNumber(doctor.phone)}
             />
           </Row>
         ))}
@@ -76,7 +84,7 @@ export function CallDoctorCard({
       {!compact ? (
         <Button
           className="mt-1"
-          label="Book a consultation"
+          label={t('callCard.book')}
           variant="secondary"
           fullWidth
           onPress={() => navigation.navigate('Doctors')}

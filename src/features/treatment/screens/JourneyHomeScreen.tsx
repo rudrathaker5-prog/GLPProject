@@ -134,6 +134,14 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
           />
 
           <ActionRow
+            icon="phone"
+            title={t('journeyHome.callLogTitle')}
+            body={t('journeyHome.callLogBody')}
+            cta={t('journeyHome.callLogCta')}
+            onPress={() => navigation.navigate('CallHistory')}
+          />
+
+          <ActionRow
             icon="chart"
             title={t('journeyHome.trackTitle')}
             body={t('journeyHome.trackBody')}

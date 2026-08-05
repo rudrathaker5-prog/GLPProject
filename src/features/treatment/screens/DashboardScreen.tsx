@@ -416,6 +416,13 @@ export function DashboardScreen() {
             */}
             <NavTile icon="check" label={t('checkin.title')} onPress={() => navigation.navigate('CheckIn', {})} />
             <NavTile icon="calendar" label={t('appointments.title')} onPress={() => navigation.navigate('Appointments')} />
+            {/*
+              Side effects were being captured in every check-in and read back
+              nowhere. The pattern across weeks is the clinically useful part,
+              and it is exactly what a patient cannot see from the inside.
+            */}
+            <NavTile icon="warning" label={t('sideEffects.title')} onPress={() => navigation.navigate('SideEffects')} />
+            <NavTile icon="phone" label={t('calls.title')} onPress={() => navigation.navigate('CallHistory')} />
           </View>
         </View>
       </ScrollView>
