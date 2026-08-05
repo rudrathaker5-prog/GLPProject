@@ -23,6 +23,11 @@ const TAB_ROOTS = [
   'features/awareness/screens/AwarenessHomeScreen.tsx',
   'features/treatment/screens/JourneyHomeScreen.tsx',
   'features/vigilance/screens/VigilanceHomeScreen.tsx',
+  // The treatment dashboard *is* the Journey tab once treatment starts, and the
+  // agent cards are the AI's own output surface — a translated reply rendered
+  // under an English heading was the exact mismatch this suite exists to catch.
+  'features/treatment/screens/DashboardScreen.tsx',
+  'features/ai/components/AgentCards.tsx',
 ];
 
 /** A capitalised run of words rendered directly as a <Text> child. */

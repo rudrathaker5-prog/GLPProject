@@ -6,6 +6,7 @@ import type { AllParamList } from '@/app/navigation/types';
 import type { AgentAction, AgentCard, Doctor } from '@core/domain/types';
 import { PRIMARY_DOCTORS } from '@features/doctors/api/fallbackDirectory';
 import { callNumber } from '@integrations/communication/communicationAdapter';
+import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Button, Card, ProgressBar, Row, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 
@@ -28,6 +29,7 @@ export function AgentCardList({ cards }: { cards: AgentCard[] }) {
 }
 
 function AgentCardView({ card }: { card: AgentCard }) {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
 
   switch (card.kind) {
@@ -44,7 +46,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
       return (
         <Card>
           <Row className="justify-between">
-            <Text variant="subheading">Eligibility indication</Text>
+            <Text variant="subheading">{t('cards.eligibilityIndication')}</Text>
             <Badge label={verdictLabel(result.verdict)} tone={tone} />
           </Row>
           {result.bmi ? (
@@ -60,7 +62,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           {result.nextSteps.length ? (
             <View className="mt-3 rounded-2xl bg-brand-50 p-3 dark:bg-brand-900/30">
               <Text variant="label" className="mb-1">
-                Next step
+                {t('cards.nextStep')}
               </Text>
               <Text variant="body">{result.nextSteps[0]}</Text>
             </View>
@@ -77,7 +79,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
       return (
         <Card>
           <Text variant="subheading" className="mb-2">
-            Doctors who can help
+            {t('cards.doctorsWhoHelp')}
           </Text>
           {doctors.slice(0, 3).map((doctor) => (
             <View
@@ -92,20 +94,20 @@ function AgentCardView({ card }: { card: AgentCard }) {
               <Row className="mt-2 gap-2">
                 {doctor.phone ? (
                   <Button
-                    label="Call"
+                    label={t('cards.call')}
                     size="sm"
                     icon={<Icon name="phone" size={14} color="#ffffff" />}
                     onPress={() => void callNumber(doctor.phone)}
                   />
                 ) : null}
                 <Button
-                  label="Book"
+                  label={t('cards.book')}
                   variant="secondary"
                   size="sm"
                   onPress={() => navigation.navigate('BookAppointment', { doctorId: doctor.id })}
                 />
                 <Button
-                  label="Details"
+                  label={t('cards.details')}
                   variant="ghost"
                   size="sm"
                   onPress={() => navigation.navigate('DoctorDetail', { doctorId: doctor.id })}
@@ -115,7 +117,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           ))}
           {doctors.length === 0 ? (
             <Text variant="body">
-              No doctors matched. Try another city from the Doctors tab.
+              {t('cards.noDoctors')}
             </Text>
           ) : null}
         </Card>
@@ -127,7 +129,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
       return (
         <Card>
           <Row className="justify-between">
-            <Text variant="subheading">Appointment confirmed</Text>
+            <Text variant="subheading">{t('cards.appointmentConfirmed')}</Text>
             <Badge label={appointment.mode.replace('_', ' ')} tone="success" />
           </Row>
           <Text variant="body" className="mt-2">
@@ -138,7 +140,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           </Text>
           <Button
             className="mt-3"
-            label="View appointment"
+            label={t('cards.viewAppointment')}
             variant="secondary"
             onPress={() =>
               navigation.navigate('AppointmentDetail', { appointmentId: appointment.id })
@@ -168,7 +170,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
             {card.myth.myth}
           </Text>
           <Text variant="caption" className="mt-1">
-            Tap for the evidence
+            {t('cards.tapForEvidence')}
           </Text>
         </Card>
       );
@@ -194,13 +196,13 @@ function AgentCardView({ card }: { card: AgentCard }) {
     case 'checkin_request':
       return (
         <Card>
-          <Text variant="subheading">Quick check-in</Text>
+          <Text variant="subheading">{t('cards.quickCheckIn')}</Text>
           <Text variant="body" className="mt-1">
             {card.fields.length} question{card.fields.length === 1 ? '' : 's'} — about a minute.
           </Text>
           <Button
             className="mt-3"
-            label="Start check-in"
+            label={t('cards.startCheckIn')}
             onPress={() => navigation.navigate('CheckIn', {})}
           />
         </Card>
@@ -209,7 +211,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
     case 'wellness':
       return (
         <Card>
-          <Text variant="subheading">Wellness score</Text>
+          <Text variant="subheading">{t('cards.wellnessScore')}</Text>
           <Text variant="display" className="mt-1">
             {card.wellness.score}
             <Text variant="caption"> / 100</Text>
@@ -228,7 +230,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
       return (
         <Card className="border-warn-400/40 bg-warn-100/30 dark:bg-amber-900/10">
           <Row className="justify-between">
-            <Text variant="subheading">Relapse risk</Text>
+            <Text variant="subheading">{t('cards.relapseRisk')}</Text>
             <Badge
               label={card.risk.band}
               tone={card.risk.band === 'high' ? 'danger' : card.risk.band === 'moderate' ? 'warning' : 'success'}
@@ -237,7 +239,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           <ProgressBar
             value={card.risk.score}
             tone={card.risk.band === 'high' ? 'danger' : 'warning'}
-            label="Risk"
+            label={t('cards.risk')}
           />
           {card.risk.signals.map((signal) => (
             <Text key={signal} variant="body" className="mt-1">
@@ -249,7 +251,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           </Text>
           <Button
             className="mt-3"
-            label="Open my prevention plan"
+            label={t('cards.openPreventionPlan')}
             variant="secondary"
             onPress={() => navigation.navigate('RelapsePlan')}
           />
@@ -260,7 +262,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
       return (
         <Card>
           <Text variant="subheading" className="mb-2">
-            Your schedule
+            {t('cards.yourSchedule')}
           </Text>
           {card.medications.map((medication) => (
             <View key={medication.id} className="mb-2">
@@ -273,7 +275,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
             </View>
           ))}
           <Button
-            label="Open medication"
+            label={t('cards.openMedication')}
             variant="secondary"
             onPress={() => navigation.navigate('Medication')}
           />
@@ -283,7 +285,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
     case 'nutrition_plan':
       return (
         <Card onPress={() => navigation.navigate('Nutrition')}>
-          <Text variant="subheading">Your nutrition targets</Text>
+          <Text variant="subheading">{t('cards.nutritionTargets')}</Text>
           <Row className="mt-2 gap-3">
             <Text variant="body">{card.plan.proteinTargetG} g protein</Text>
             <Text variant="body">{card.plan.waterTargetLitres} L water</Text>
@@ -325,7 +327,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
                   <Text variant="caption">{doctor.phone}</Text>
                 </View>
                 <Button
-                  label="Call"
+                  label={t('cards.call')}
                   size="sm"
                   variant={card.severity === 'urgent' ? 'danger' : 'primary'}
                   icon={<Icon name="phone" size={15} color="#ffffff" />}
@@ -336,7 +338,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
           </View>
 
           <Button
-            label="See all doctors"
+            label={t('cards.seeAllDoctors')}
             variant="secondary"
             fullWidth
             onPress={() => navigation.navigate('Doctors')}

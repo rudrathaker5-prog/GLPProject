@@ -148,11 +148,11 @@ export function DashboardScreen() {
               <Row>
                 <Icon name="trophy" size={22} color="#0b955c" />
                 <Text variant="subheading" className="ml-2 flex-1">
-                  Milestone reached
+                  {t('dash.milestoneReached')}
                 </Text>
               </Row>
               <Text variant="body" className="mt-1">
-                Tap to see it on your journey.
+                {t('dash.milestoneTap')}
               </Text>
             </Card>
           ) : null}
@@ -171,7 +171,7 @@ export function DashboardScreen() {
                 </Text>
               </Row>
               <Text variant="body" className="mt-1">
-                Arrange a refill so you do not miss a dose.
+                {t('dash.refillSoon')}
               </Text>
             </Card>
           ) )}
@@ -186,7 +186,7 @@ export function DashboardScreen() {
                 <Row className="flex-1">
                   <Icon name="doctor" size={18} color={theme.primary} />
                   <Text variant="subheading" className="ml-2">
-                    New note from your doctor
+                    {t('dash.newNote')}
                   </Text>
                 </Row>
                 <Icon name="chevron" size={18} color={theme.textMuted} />
@@ -227,7 +227,7 @@ export function DashboardScreen() {
               action={
                 (medications.data ?? []).length === 0 ? (
                   <Button
-                    label="Add prescription"
+                    label={t('dash.addPrescription')}
                     onPress={() => navigation.navigate('PrescriptionUpload')}
                   />
                 ) : undefined
@@ -329,7 +329,7 @@ export function DashboardScreen() {
           {/* Check-in nudge */}
           {checkInGap.data === null || (checkInGap.data ?? 0) >= 3 ? (
             <Card className="mt-4 border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20">
-              <Text variant="subheading">A quick check-in?</Text>
+              <Text variant="subheading">{t('dash.quickCheckIn')}</Text>
               <Text variant="body" className="mt-1">
                 {checkInGap.data === null
                   ? 'Your first check-in sets the baseline for your wellness score.'
@@ -337,7 +337,7 @@ export function DashboardScreen() {
               </Text>
               <Button
                 className="mt-3"
-                label="Start check-in"
+                label={t('dash.startCheckIn')}
                 onPress={() => navigation.navigate('CheckIn', {})}
               />
             </Card>
@@ -382,10 +382,10 @@ export function DashboardScreen() {
           ) : (
             <EmptyState
               title={t('appointments.noneUpcoming')}
-              message="Book your next review before you need it."
+              message={t('dash.bookReview')}
               action={
                 <Button
-                  label="Find a doctor"
+                  label={t('dash.findDoctor')}
                   onPress={() => navigation.navigate('Doctors')}
                 />
               }
@@ -393,13 +393,13 @@ export function DashboardScreen() {
           )}
 
           {/* Reach a human */}
-          <SectionTitle title="Need to speak to someone?" />
+          <SectionTitle title={t('dash.speakToSomeone')} />
           <CallDoctorCard
-            subtitle="Side effects, doubts, or something that does not feel right — call, do not wait."
+            subtitle={t('dash.speakSubtitle')}
           />
 
           {/* Everything else */}
-          <SectionTitle title="Your care" />
+          <SectionTitle title={t('dash.yourCare')} />
           <View className="flex-row flex-wrap justify-between">
             <NavTile icon="chat" label={t('treatment.aiCoach')} onPress={() => navigation.navigate('Chat')} />
             <NavTile icon="pill" label={t('medication.title')} onPress={() => navigation.navigate('Medication')} />
