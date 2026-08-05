@@ -13,11 +13,11 @@
 -- ---------------------------------------------------------------------
 
 insert into hospitals (id, name, city, address, phone, latitude, longitude, has_obesity_clinic, has_pharmacy) values
-  ('11111111-1111-4111-8111-000000000001', 'Sterling Metabolic Institute', 'Ahmedabad', 'Nr. Judges Bungalow Road, Bodakdev, Ahmedabad 380054', '+917940001001', 23.0396, 72.5100, true, true),
-  ('11111111-1111-4111-8111-000000000002', 'Civil Endocrine & Obesity Centre', 'Ahmedabad', 'Asarwa, Ahmedabad 380016', '+917940001002', 23.0530, 72.6050, true, true),
-  ('11111111-1111-4111-8111-000000000003', 'Sahyadri Weight Care Clinic', 'Pune', 'Karve Road, Deccan Gymkhana, Pune 411004', '+912040002001', 18.5100, 73.8400, true, false),
-  ('11111111-1111-4111-8111-000000000004', 'Mumbai Diabetes & Obesity Hospital', 'Mumbai', 'Dr. Annie Besant Road, Worli, Mumbai 400018', '+912240003001', 19.0020, 72.8180, true, true),
-  ('11111111-1111-4111-8111-000000000005', 'Delhi Metabolic Health Centre', 'Delhi', 'Sector 8, Rohini, New Delhi 110085', '+911140004001', 28.7000, 77.1100, true, true)
+  ('11111111-1111-4111-8111-000000000001', 'Sterling Metabolic Institute', 'Ahmedabad', 'Nr. Judges Bungalow Road, Bodakdev, Ahmedabad 380054', '+918879511005', 23.0396, 72.5100, true, true),
+  ('11111111-1111-4111-8111-000000000002', 'Civil Endocrine & Obesity Centre', 'Ahmedabad', 'Asarwa, Ahmedabad 380016', '+918879511005', 23.0530, 72.6050, true, true),
+  ('11111111-1111-4111-8111-000000000003', 'Sahyadri Weight Care Clinic', 'Pune', 'Karve Road, Deccan Gymkhana, Pune 411004', '+918879511005', 18.5100, 73.8400, true, false),
+  ('11111111-1111-4111-8111-000000000004', 'Mumbai Diabetes & Obesity Hospital', 'Mumbai', 'Dr. Annie Besant Road, Worli, Mumbai 400018', '+917986791522', 19.0020, 72.8180, true, true),
+  ('11111111-1111-4111-8111-000000000005', 'Delhi Metabolic Health Centre', 'Delhi', 'Sector 8, Rohini, New Delhi 110085', '+918879511005', 28.7000, 77.1100, true, true)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------
@@ -25,11 +25,11 @@ on conflict (id) do nothing;
 -- ---------------------------------------------------------------------
 
 insert into doctors (id, full_name, speciality, qualifications, registration_number, hospital_id, city, languages, consultation_fee, teleconsult_available, rating, years_experience, phone, bio) values
-  ('22222222-2222-4222-8222-000000000001', 'Dr. Anjali Mehta', 'Endocrinology', 'MBBS, MD (Medicine), DM (Endocrinology)', 'GMC-45231', '11111111-1111-4111-8111-000000000001', 'Ahmedabad', '{en,hi,gu}', 800, true, 4.8, 14, '+919825000001', 'Runs a dedicated GLP-1 titration clinic and has managed over 2,000 patients through medical weight management.'),
-  ('22222222-2222-4222-8222-000000000002', 'Dr. Rakesh Patel', 'Bariatric & Metabolic Medicine', 'MBBS, MS (General Surgery), FIAGES', 'GMC-38872', '11111111-1111-4111-8111-000000000002', 'Ahmedabad', '{en,gu,hi}', 600, true, 4.6, 18, '+919825000002', 'Focuses on non-surgical metabolic care first, with surgery reserved for clearly indicated cases.'),
-  ('22222222-2222-4222-8222-000000000003', 'Dr. Sneha Kulkarni', 'Endocrinology', 'MBBS, MD (Medicine), DNB (Endocrinology)', 'MMC-71204', '11111111-1111-4111-8111-000000000003', 'Pune', '{en,mr,hi}', 900, true, 4.9, 11, '+919822000003', 'Special interest in PCOS, insulin resistance and behaviour-first obesity care.'),
-  ('22222222-2222-4222-8222-000000000004', 'Dr. Imran Shaikh', 'Diabetology', 'MBBS, MD (Medicine), Fellowship in Diabetology', 'MMC-66019', '11111111-1111-4111-8111-000000000004', 'Mumbai', '{en,hi,mr}', 1200, true, 4.7, 20, '+919820000004', 'Manages type 2 diabetes with obesity, with emphasis on cardiovascular risk reduction.'),
-  ('22222222-2222-4222-8222-000000000005', 'Dr. Kavita Rao', 'Nutrition & Metabolic Medicine', 'MBBS, MD (Community Medicine), PG Dip Clinical Nutrition', 'DMC-92310', '11111111-1111-4111-8111-000000000005', 'Delhi', '{en,hi}', 700, true, 4.5, 9, '+919810000005', 'Builds Indian-diet-first nutrition plans alongside medical therapy.')
+  ('22222222-2222-4222-8222-000000000001', 'Dr. Anjali Mehta', 'Endocrinology', 'MBBS, MD (Medicine), DM (Endocrinology)', 'GMC-45231', '11111111-1111-4111-8111-000000000001', 'Ahmedabad', '{en,hi,gu}', 800, true, 4.8, 14, '+918879511005', 'Runs a dedicated GLP-1 titration clinic and has managed over 2,000 patients through medical weight management.'),
+  ('22222222-2222-4222-8222-000000000002', 'Dr. Rakesh Patel', 'Bariatric & Metabolic Medicine', 'MBBS, MS (General Surgery), FIAGES', 'GMC-38872', '11111111-1111-4111-8111-000000000002', 'Ahmedabad', '{en,gu,hi}', 600, true, 4.6, 18, '+917986791522', 'Focuses on non-surgical metabolic care first, with surgery reserved for clearly indicated cases.'),
+  ('22222222-2222-4222-8222-000000000003', 'Dr. Sneha Kulkarni', 'Endocrinology', 'MBBS, MD (Medicine), DNB (Endocrinology)', 'MMC-71204', '11111111-1111-4111-8111-000000000003', 'Pune', '{en,mr,hi}', 900, true, 4.9, 11, '+918879511005', 'Special interest in PCOS, insulin resistance and behaviour-first obesity care.'),
+  ('22222222-2222-4222-8222-000000000004', 'Dr. Imran Shaikh', 'Diabetology', 'MBBS, MD (Medicine), Fellowship in Diabetology', 'MMC-66019', '11111111-1111-4111-8111-000000000004', 'Mumbai', '{en,hi,mr}', 1200, true, 4.7, 20, '+917986791522', 'Manages type 2 diabetes with obesity, with emphasis on cardiovascular risk reduction.'),
+  ('22222222-2222-4222-8222-000000000005', 'Dr. Kavita Rao', 'Nutrition & Metabolic Medicine', 'MBBS, MD (Community Medicine), PG Dip Clinical Nutrition', 'DMC-92310', '11111111-1111-4111-8111-000000000005', 'Delhi', '{en,hi}', 700, true, 4.5, 9, '+918879511005', 'Builds Indian-diet-first nutrition plans alongside medical therapy.')
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------

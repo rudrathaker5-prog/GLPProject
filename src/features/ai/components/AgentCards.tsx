@@ -2,12 +2,14 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { AgentAction, AgentCard, Doctor } from '@core/domain/types';
+import { PRIMARY_DOCTORS } from '@features/doctors/api/fallbackDirectory';
+import { callNumber } from '@integrations/communication/communicationAdapter';
 import { Badge, Button, Card, ProgressBar, Row, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 /**
  * Renders the structured cards the agent returns alongside its prose.
@@ -88,16 +90,25 @@ function AgentCardView({ card }: { card: AgentCard }) {
                 {doctor.consultationFee ? ` • ₹${doctor.consultationFee}` : ''}
               </Text>
               <Row className="mt-2 gap-2">
-                <Button
-                  label="View"
-                  variant="secondary"
-                  size="sm"
-                  onPress={() => navigation.navigate('DoctorDetail', { doctorId: doctor.id })}
-                />
+                {doctor.phone ? (
+                  <Button
+                    label="Call"
+                    size="sm"
+                    icon={<Icon name="phone" size={14} color="#ffffff" />}
+                    onPress={() => void callNumber(doctor.phone)}
+                  />
+                ) : null}
                 <Button
                   label="Book"
+                  variant="secondary"
                   size="sm"
                   onPress={() => navigation.navigate('BookAppointment', { doctorId: doctor.id })}
+                />
+                <Button
+                  label="Details"
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => navigation.navigate('DoctorDetail', { doctorId: doctor.id })}
                 />
               </Row>
             </View>
@@ -271,7 +282,7 @@ function AgentCardView({ card }: { card: AgentCard }) {
 
     case 'nutrition_plan':
       return (
-        <Card onPress={() => navigation.navigate('Treatment', { screen: 'Nutrition' })}>
+        <Card onPress={() => navigation.navigate('Nutrition')}>
           <Text variant="subheading">Your nutrition targets</Text>
           <Row className="mt-2 gap-3">
             <Text variant="body">{card.plan.proteinTargetG} g protein</Text>
@@ -305,11 +316,30 @@ function AgentCardView({ card }: { card: AgentCard }) {
             </Text>
           </Row>
           <Text variant="body">{card.message}</Text>
+
+          <View className="mt-3">
+            {PRIMARY_DOCTORS.map((doctor) => (
+              <Row key={doctor.id} className="mb-2 justify-between">
+                <View className="flex-1 pr-2">
+                  <Text variant="bodyStrong">{doctor.fullName}</Text>
+                  <Text variant="caption">{doctor.phone}</Text>
+                </View>
+                <Button
+                  label="Call"
+                  size="sm"
+                  variant={card.severity === 'urgent' ? 'danger' : 'primary'}
+                  icon={<Icon name="phone" size={15} color="#ffffff" />}
+                  onPress={() => void callNumber(doctor.phone)}
+                />
+              </Row>
+            ))}
+          </View>
+
           <Button
-            className="mt-3"
-            label="Find a doctor"
-            variant={card.severity === 'urgent' ? 'danger' : 'secondary'}
-            onPress={() => navigation.navigate('Awareness', { screen: 'Doctors' })}
+            label="See all doctors"
+            variant="secondary"
+            fullWidth
+            onPress={() => navigation.navigate('Doctors')}
           />
         </Card>
       );
@@ -329,16 +359,16 @@ function ActionButton({ action }: { action: AgentAction }) {
         break;
       case 'open_doctors':
       case 'call_doctor':
-        navigation.navigate('Awareness', { screen: 'Doctors' });
+        navigation.navigate('Doctors');
         break;
       case 'book_appointment':
         navigation.navigate('Appointments');
         break;
       case 'open_education':
-        navigation.navigate('Awareness', { screen: 'Learn' });
+        navigation.navigate('Learn');
         break;
       case 'open_myths':
-        navigation.navigate('Awareness', { screen: 'Myths' });
+        navigation.navigate('Myths');
         break;
       case 'start_treatment':
         navigation.navigate('Onboarding');
@@ -356,10 +386,10 @@ function ActionButton({ action }: { action: AgentAction }) {
         navigation.navigate('Refill', {});
         break;
       case 'open_nutrition':
-        navigation.navigate('Treatment', { screen: 'Nutrition' });
+        navigation.navigate('Nutrition');
         break;
       case 'open_journey':
-        navigation.navigate('Treatment', { screen: 'Journey' });
+        navigation.navigate('JourneyMap');
         break;
       default:
         break;

@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { getTopic } from '@features/awareness/content/education';
 import { currentRelapseRisk, progressSummary } from '@features/tracking/api/trackingRepository';
 import { useTranslation } from '@i18n/useTranslation';
@@ -11,7 +11,7 @@ import { Badge, Button, Card, ProgressBar, Row, Screen, SectionTitle, Text } fro
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 /**
  * The relapse-prevention protocol.
@@ -147,7 +147,7 @@ export function RelapsePlanScreen() {
           label="Book a review now"
           fullWidth
           size="lg"
-          onPress={() => navigation.navigate('Awareness', { screen: 'Doctors' })}
+          onPress={() => navigation.navigate('Doctors')}
         />
         <Button
           label="Talk it through with my coach"

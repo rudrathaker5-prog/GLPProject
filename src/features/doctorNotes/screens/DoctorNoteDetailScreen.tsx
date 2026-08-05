@@ -3,7 +3,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import {
   acknowledgeNote,
   getDoctorNote,
@@ -12,8 +12,8 @@ import {
 import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Button, Card, EmptyState, LoadingState, Row, Screen, Text } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'DoctorNoteDetail'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'DoctorNoteDetail'>;
 
 export function DoctorNoteDetailScreen() {
   const route = useRoute<Props>();

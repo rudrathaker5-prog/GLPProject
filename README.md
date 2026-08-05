@@ -10,6 +10,19 @@ languages — English, हिन्दी, ગુજરાતી, मराठ�
 
 ---
 
+## The three tabs
+
+One permanent bottom tab bar, always visible, Instagram-style. No stage gate, no
+login wall — all three are reachable from the moment you install.
+
+| Tab | What it is |
+|---|---|
+| **Awareness** | Anonymous. Conversational AI card, eligibility check, education, myth coach, doctors with one-tap calling. |
+| **My Journey** | Treatment. Doses, reminders, weight, nutrition, prescriptions, doctor notes, peer support, journey map. Works before treatment starts too. |
+| **Staying Well** | After treatment. Relapse risk, 3/6/12-month check-ins, milestones, adverse-event education, one-tap doctor. |
+
+Your stage only decides which tab opens first.
+
 ## What actually works right now
 
 Everything below runs against real logic, not mock screens. Clone, `npm install`,
@@ -27,9 +40,15 @@ build, and it works — **with no backend and no API key configured**:
 | Relapse risk | Computed on-device | Computed in SQL, same formula |
 | Doctor portal | — | Patient list, clinical detail, note writing |
 | Voice input | — | Record → Whisper-compatible transcription |
+| Calling a doctor | **Working** — dials +91 8879511005 / +91 7986791522 | Same |
 
-The app tells the user which mode it is in (Settings → About) rather than
-pretending a service is connected.
+There is also a middle path: **paste your own OpenAI key** into Settings → AI
+and the full agentic loop — memory, patient context, all 17 tools — runs
+directly on the phone, with no server to deploy. That is the route to make a
+personally installed APK genuinely conversational.
+
+The app tells you which mode it is in (Settings → About, and a banner in chat)
+rather than pretending a service is connected.
 
 ---
 
@@ -50,17 +69,17 @@ npm run apk:debug             # android/app/build/outputs/apk/debug/
 
 Full instructions: [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
-## Getting an APK
+## Getting an APK on your phone
 
-Three routes, in order of least setup:
+**→ [docs/GET_THE_APK.md](docs/GET_THE_APK.md) — step by step, nothing to install.**
 
-1. **GitHub Actions** — push, then download the APK from the workflow run.
-   No Expo account, no local Android SDK. See
-   [`.github/workflows/android-apk.yml`](.github/workflows/android-apk.yml).
-2. **EAS Build** — `eas build -p android --profile preview`.
-3. **Local Gradle** — `npx expo prebuild -p android && npm run apk:release`.
+Short version: GitHub → **Actions** → **Build Android APK** → **Run workflow**.
+Download the artifact when it goes green, unzip, copy to your phone, tap to
+install. No Expo account, no local Android SDK.
 
-Details, signing and troubleshooting: [docs/BUILDING_APK.md](docs/BUILDING_APK.md).
+Alternatives: `eas build -p android --profile preview`, or
+`npx expo prebuild -p android && npm run apk:release` locally.
+Signing and troubleshooting: [docs/BUILDING_APK.md](docs/BUILDING_APK.md).
 
 ---
 
@@ -102,9 +121,11 @@ More: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
 ### 1. Awareness — anonymous, no login wall
 
 A conversational card is the primary interface: type or speak, in any of the
-four languages. Underneath: eligibility checker, education library, myth coach,
-doctor directory. Nothing is stored against an identity. The moment someone says
-*"I want treatment"*, the agent surfaces doctors and a booking flow.
+four languages. Underneath: the "obesity is a medical condition" reframe on the
+home screen itself, eligibility checker, education library, myth coach, and a
+doctor block with **working Call buttons**. Nothing is stored against an
+identity. The moment someone says *"I want treatment"*, the agent surfaces
+doctors and a booking flow.
 
 ### 2. Treatment — the daily companion
 
@@ -151,14 +172,16 @@ Crisis routing uses Tele-MANAS (14416) and 112.
 ```bash
 npm run typecheck    # tsc --noEmit, strict, zero errors
 npm run lint         # eslint, zero errors
-npm test             # 67 tests
+npm test             # 79 tests
 npm run bundle:android   # full Metro production bundle
 ```
 
 The test suite covers the parts where being wrong matters: BMI and Indian
 thresholds, eligibility verdicts and contraindications, multilingual safety
-triage, wellness and relapse scoring, adherence, and the on-device engine's
-refusal to give dose advice.
+triage, wellness and relapse scoring, adherence, the on-device engine's refusal
+to give dose advice, agent tool-schema integrity, and that **every phone number
+in the directory is a valid dialable number** — because a Call button that does
+nothing is worse than no button at all.
 
 ---
 

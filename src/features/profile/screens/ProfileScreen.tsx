@@ -4,7 +4,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import { openTab } from '@/app/navigation/tabs';
+import type { AllParamList } from '@/app/navigation/types';
 import { calculateBmi, bmiCategoryIndian } from '@core/clinical/eligibility';
 import type { JourneyStage } from '@core/domain/types';
 import { useAuthStore } from '@features/auth/store/authStore';
@@ -26,7 +27,7 @@ import {
   Text,
 } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 const STAGES: { value: JourneyStage; label: string }[] = [
   { value: 'awareness', label: 'Exploring' },
@@ -93,14 +94,10 @@ export function ProfileScreen() {
     setStage(stage);
     void queryClient.invalidateQueries({ queryKey: ['profile'] });
 
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: stage === 'treatment' ? 'Treatment' : stage === 'vigilance' ? 'Vigilance' : 'Awareness',
-        },
-      ],
-    });
+    openTab(
+      navigation,
+      stage === 'treatment' ? 'JourneyTab' : stage === 'vigilance' ? 'VigilanceTab' : 'AwarenessTab',
+    );
   };
 
   const bmi = calculateBmi(
@@ -236,7 +233,7 @@ export function ProfileScreen() {
                   style: 'destructive',
                   onPress: () => {
                     void signOut();
-                    navigation.reset({ index: 0, routes: [{ name: 'Awareness' }] });
+                    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
                   },
                 },
               ])

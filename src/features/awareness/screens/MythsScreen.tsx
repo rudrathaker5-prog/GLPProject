@@ -3,14 +3,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { MythCard } from '@core/domain/types';
 import { MYTHS, searchMyths } from '@features/awareness/content/myths';
 import { Badge, Button, Card, Input, Row, Screen, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function MythsScreen() {
   const navigation = useNavigation<Nav>();

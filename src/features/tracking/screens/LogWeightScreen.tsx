@@ -4,14 +4,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { MILESTONE_LABELS } from '@features/journey/api/journeyRepository';
 import { logWeight, progressSummary } from '@features/tracking/api/trackingRepository';
 import { WeightSparkline } from '@features/tracking/components/WeightSparkline';
 import { useTranslation } from '@i18n/useTranslation';
 import { Button, Card, Field, Input, Row, Screen, StatTile, Text } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function LogWeightScreen() {
   const navigation = useNavigation<Nav>();
@@ -37,7 +37,7 @@ export function LogWeightScreen() {
       if (milestones.length > 0) {
         const label = MILESTONE_LABELS[milestones[0] as keyof typeof MILESTONE_LABELS];
         Alert.alert(label.title, label.body, [
-          { text: 'See my journey', onPress: () => navigation.navigate('Treatment', { screen: 'Journey' }) },
+          { text: 'See my journey', onPress: () => navigation.navigate('JourneyMap') },
           { text: 'Done', style: 'cancel', onPress: () => navigation.goBack() },
         ]);
         return;

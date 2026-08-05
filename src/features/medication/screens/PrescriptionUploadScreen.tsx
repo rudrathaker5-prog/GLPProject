@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Alert, Image, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { supabase } from '@core/supabase/client';
 import { useAuthStore } from '@features/auth/store/authStore';
 import {
@@ -18,7 +18,7 @@ import { Badge, Button, Card, Field, Input, Row, Screen, SectionTitle, Text } fr
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 interface ExtractionResponse {
   degraded?: boolean;

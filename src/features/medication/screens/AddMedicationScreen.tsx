@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { DoseFrequency, MedicationForm } from '@core/domain/types';
 import {
   addMedication,
@@ -14,8 +14,8 @@ import {
 import { useTranslation } from '@i18n/useTranslation';
 import { Button, Card, Chip, Field, Input, Row, Screen, Text } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'AddMedication'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'AddMedication'>;
 
 const FORMS: MedicationForm[] = ['injection', 'tablet', 'capsule', 'syrup', 'other'];
 const FREQUENCIES: DoseFrequency[] = [

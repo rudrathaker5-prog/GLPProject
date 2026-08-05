@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { appInfo } from '@core/config/env';
 import { useAuthStore } from '@features/auth/store/authStore';
 import { getDoctor } from '@features/doctors/api/doctorsRepository';
@@ -12,7 +12,7 @@ import { Badge, Button, Card, LoadingState, Row, Screen, SectionTitle, StatTile,
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function DoctorProfileScreen() {
   const navigation = useNavigation<Nav>();
@@ -128,7 +128,7 @@ export function DoctorProfileScreen() {
                 style: 'destructive',
                 onPress: () => {
                   void signOut();
-                  navigation.reset({ index: 0, routes: [{ name: 'Awareness' }] });
+                  navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
                 },
               },
             ])

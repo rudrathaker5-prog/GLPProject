@@ -3,12 +3,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLayoutEffect } from 'react';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { getTopic } from '@features/awareness/content/education';
 import { Badge, Button, Card, EmptyState, Screen, Text } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'EducationTopic'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'EducationTopic'>;
 
 export function EducationTopicScreen() {
   const route = useRoute<Props>();

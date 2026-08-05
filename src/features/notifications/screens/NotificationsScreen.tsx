@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { NotificationCategory } from '@core/domain/types';
 import {
   cancelAllReminders,
@@ -26,7 +26,7 @@ import {
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 const CATEGORY_ICON: Record<NotificationCategory, IconName> = {
   medication: 'pill',

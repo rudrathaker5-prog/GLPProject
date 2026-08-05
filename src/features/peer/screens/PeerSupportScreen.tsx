@@ -3,14 +3,14 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { COMMUNITY_GUIDELINES, listGroups } from '@features/peer/api/peerRepository';
 import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Card, LoadingState, Row, Screen, SectionTitle, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function PeerSupportScreen() {
   const navigation = useNavigation<Nav>();

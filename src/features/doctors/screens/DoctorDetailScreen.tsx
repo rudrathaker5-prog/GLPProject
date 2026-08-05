@@ -4,15 +4,15 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { getDoctor } from '@features/doctors/api/doctorsRepository';
 import { callNumber, openDirections } from '@integrations/communication/communicationAdapter';
 import { Badge, Button, Card, EmptyState, LoadingState, Row, Screen, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'DoctorDetail'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'DoctorDetail'>;
 
 export function DoctorDetailScreen() {
   const route = useRoute<Props>();

@@ -6,17 +6,30 @@ import type {
   LanguageCode,
 } from '@core/domain/types';
 import { newId, nowIso } from '@core/data/localDb';
-import { runLocalEngine } from '@features/ai/engine/localEngine';
 import { AgentUnavailableError, callAgent, isAgentConfigured } from '@features/ai/api/agentGateway';
+import { hasApiKey } from '@features/ai/api/openAiClient';
+import { runLocalEngine } from '@features/ai/engine/localEngine';
+import { runOnDeviceAgent } from '@features/ai/agent/onDeviceAgent';
 import { getProfile, saveProfile } from '@features/profile/api/profileRepository';
 
 /**
- * Client-side orchestration.
+ * Decides who answers a turn.
  *
- * Decides between the server agent and the on-device engine, applies the local
- * safety screen either way, and persists anything the conversation revealed
- * (measurements the user typed in prose, for example) back onto the profile.
+ * Three engines, one contract — the UI never knows which replied:
+ *
+ *   1. Server agent      full agentic loop, key held server-side. Preferred
+ *                        whenever a Supabase project is configured, because no
+ *                        key touches the device.
+ *   2. On-device agent   same prompts, same tools, running against the user's
+ *                        own API key from Settings → AI. This is what makes a
+ *                        personally installed APK genuinely conversational.
+ *   3. Offline engine    deterministic rules over the bundled care library.
+ *                        Always available, needs nothing.
+ *
+ * Each falls through to the next on failure, so there is no dead end.
  */
+
+export type AgentSource = 'server' | 'device' | 'offline';
 
 export interface AgentTurnInput {
   message: string;
@@ -29,23 +42,18 @@ export interface AgentTurnInput {
 export interface AgentTurnResult {
   conversationId: string | null;
   assistantMessage: ChatMessage;
-  degraded: boolean;
+  source: AgentSource;
+  /** Set when we had to fall back — surfaced in the UI so the user is not misled. */
   degradedReason?: string;
-  followUp: string | null;
 }
 
 const HISTORY_WINDOW = 12;
 
 export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnResult> {
   const { message, stage, language } = input;
-  const profile = await getProfile();
+  const profile = await getProfile().catch(() => null);
 
-  const recentMessages = input.history
-    .filter((m) => m.role === 'user' || m.role === 'assistant')
-    .slice(-HISTORY_WINDOW)
-    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-
-  // ---- Remote first -------------------------------------------------------
+  // ---- 1. Server agent ----------------------------------------------------
   if (isAgentConfigured()) {
     try {
       const response = await callAgent({
@@ -54,13 +62,16 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnResu
         stage,
         language,
         clientContext: {
-          heightCm: profile.heightCm ?? undefined,
-          weightKg: profile.startingWeightKg ?? undefined,
-          waistCm: profile.waistCm ?? undefined,
-          sex: profile.sex,
-          comorbidities: profile.comorbidities,
-          contraindications: profile.contraindications,
-          recentMessages,
+          heightCm: profile?.heightCm ?? undefined,
+          weightKg: profile?.startingWeightKg ?? undefined,
+          waistCm: profile?.waistCm ?? undefined,
+          sex: profile?.sex,
+          comorbidities: profile?.comorbidities,
+          contraindications: profile?.contraindications,
+          recentMessages: input.history
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .slice(-HISTORY_WINDOW)
+            .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
         },
       });
 
@@ -73,25 +84,56 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnResu
             language,
             cards: response.cards,
           }),
-          degraded: false,
-          followUp: null,
+          source: 'server',
         };
       }
-
-      return localTurn(input, profile, response.reason ?? 'Gateway degraded');
     } catch (error) {
-      const reason =
-        error instanceof AgentUnavailableError ? error.reason : 'Could not reach the care service';
+      // Fall through to the device agent.
+      if (!(error instanceof AgentUnavailableError)) {
+        console.warn('server agent failed', error);
+      }
+    }
+  }
+
+  // ---- 2. On-device agent -------------------------------------------------
+  if (await hasApiKey()) {
+    try {
+      const result = await runOnDeviceAgent({
+        message,
+        stage,
+        language,
+        history: input.history,
+      });
+
+      return {
+        conversationId: input.conversationId,
+        assistantMessage: buildMessage({
+          conversationId: input.conversationId,
+          content: result.reply,
+          language,
+          cards: result.cards,
+        }),
+        source: 'device',
+      };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'AI request failed';
       return localTurn(input, profile, reason);
     }
   }
 
-  return localTurn(input, profile, 'No AI gateway configured — using the built-in care library');
+  // ---- 3. Offline engine --------------------------------------------------
+  return localTurn(
+    input,
+    profile,
+    isAgentConfigured()
+      ? 'The care service is unavailable'
+      : 'Add your AI key in Settings → AI for full conversational coaching',
+  );
 }
 
 async function localTurn(
   input: AgentTurnInput,
-  profile: Awaited<ReturnType<typeof getProfile>>,
+  profile: Awaited<ReturnType<typeof getProfile>> | null,
   reason: string,
 ): Promise<AgentTurnResult> {
   const result = runLocalEngine({
@@ -103,13 +145,13 @@ async function localTurn(
       content: m.content,
     })),
     profile: {
-      heightCm: profile.heightCm,
-      weightKg: profile.startingWeightKg,
-      waistCm: profile.waistCm,
-      sex: profile.sex,
-      comorbidities: profile.comorbidities,
-      contraindications: profile.contraindications,
-      displayName: profile.displayName,
+      heightCm: profile?.heightCm,
+      weightKg: profile?.startingWeightKg,
+      waistCm: profile?.waistCm,
+      sex: profile?.sex,
+      comorbidities: profile?.comorbidities,
+      contraindications: profile?.contraindications,
+      displayName: profile?.displayName,
     },
   });
 
@@ -117,10 +159,10 @@ async function localTurn(
   const { heightCm, weightKg, waistCm } = result.extracted;
   if (heightCm || weightKg || waistCm) {
     await saveProfile({
-      heightCm: heightCm ?? profile.heightCm,
-      startingWeightKg: profile.startingWeightKg ?? weightKg ?? null,
-      waistCm: waistCm ?? profile.waistCm,
-    });
+      heightCm: heightCm ?? profile?.heightCm ?? null,
+      startingWeightKg: profile?.startingWeightKg ?? weightKg ?? null,
+      waistCm: waistCm ?? profile?.waistCm ?? null,
+    }).catch(() => undefined);
   }
 
   const content = result.followUp ? `${result.reply}\n\n${result.followUp}` : result.reply;
@@ -133,9 +175,8 @@ async function localTurn(
       language: input.language,
       cards: result.cards,
     }),
-    degraded: true,
+    source: 'offline',
     degradedReason: reason,
-    followUp: result.followUp,
   };
 }
 
@@ -176,7 +217,7 @@ export function userMessage(
   };
 }
 
-/** Pre-turn screen used by the UI to show an escalation banner immediately. */
+/** Pre-turn screen so the UI can show an escalation banner immediately. */
 export function screenMessage(content: string) {
   return screenForSafety(content);
 }

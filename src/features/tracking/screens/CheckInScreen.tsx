@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { SideEffectReport, SideEffectSeverity } from '@core/domain/types';
 import { useAuthStore } from '@features/auth/store/authStore';
 import { scheduleCheckInReminder } from '@features/notifications/service/notificationService';
@@ -27,8 +27,8 @@ import {
 } from '@ui/components';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'CheckIn'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'CheckIn'>;
 
 /**
  * Passive tracking.
@@ -122,7 +122,7 @@ export function CheckInScreen() {
           [
             {
               text: 'Find a doctor',
-              onPress: () => navigation.navigate('Awareness', { screen: 'Doctors' }),
+              onPress: () => navigation.navigate('Doctors'),
             },
             { text: 'Understood', style: 'cancel', onPress: () => navigation.goBack() },
           ],

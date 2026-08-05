@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { AppointmentMode } from '@core/domain/types';
 import {
   attachCalendarEvent,
@@ -28,8 +28,8 @@ import {
   Text,
 } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'BookAppointment'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'BookAppointment'>;
 
 const DAYS_AHEAD = 14;
 

@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { listDoctorNotes } from '@features/doctorNotes/api/doctorNotesRepository';
 import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Button, Card, EmptyState, LoadingState, Row, Screen, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function DoctorNotesScreen() {
   const navigation = useNavigation<Nav>();

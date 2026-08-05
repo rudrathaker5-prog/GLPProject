@@ -3,7 +3,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import {
   attachCalendarEvent,
   getAppointment,
@@ -21,8 +21,8 @@ import { Badge, Button, Card, EmptyState, LoadingState, Row, Screen, Text } from
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'AppointmentDetail'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'AppointmentDetail'>;
 
 export function AppointmentDetailScreen() {
   const route = useRoute<Props>();

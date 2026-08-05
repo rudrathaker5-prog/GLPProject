@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, Switch, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { appInfo, capabilities } from '@core/config/env';
 import { useAuthStore } from '@features/auth/store/authStore';
 import { listMedications } from '@features/medication/api/medicationRepository';
@@ -21,7 +21,7 @@ import { Badge, Button, Card, Chip, Row, Screen, SectionTitle, Text } from '@ui/
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function SettingsScreen() {
   const navigation = useNavigation<Nav>();
@@ -68,7 +68,7 @@ export function SettingsScreen() {
             await cancelAllReminders();
             await deleteEverything();
             queryClient.clear();
-            navigation.reset({ index: 0, routes: [{ name: 'Awareness' }] });
+            navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
           },
         },
       ],
@@ -84,6 +84,23 @@ export function SettingsScreen() {
             <View className="ml-3">
               <Text variant="subheading">{t('settings.language')}</Text>
               <Text variant="caption">{languageDisplayName(language)}</Text>
+            </View>
+          </Row>
+          <Icon name="chevron" size={18} color={theme.textMuted} />
+        </Row>
+      </Card>
+
+      <Card className="mt-3" onPress={() => navigation.navigate('AiSettings')}>
+        <Row className="justify-between">
+          <Row className="flex-1">
+            <Icon name="sparkle" size={20} color={theme.primary} />
+            <View className="ml-3 flex-1">
+              <Text variant="subheading">AI coach</Text>
+              <Text variant="caption">
+                {capabilities.remoteAi
+                  ? 'Connected to the care service'
+                  : 'Add your own key for full conversation'}
+              </Text>
             </View>
           </Row>
           <Icon name="chevron" size={18} color={theme.textMuted} />

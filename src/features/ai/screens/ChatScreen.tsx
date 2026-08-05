@@ -1,4 +1,5 @@
-import { useRoute, type RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { ChatMessage } from '@core/domain/types';
 import { AgentCardList } from '@features/ai/components/AgentCards';
 import { useChatStore } from '@features/ai/store/chatStore';
@@ -22,7 +23,8 @@ import { Badge, Row, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type ChatRouteProp = RouteProp<RootStackParamList, 'Chat'>;
+type ChatRouteProp = RouteProp<AllParamList, 'Chat'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 const SPEECH_LOCALE: Record<string, string> = {
   en: 'en-IN',
@@ -33,6 +35,7 @@ const SPEECH_LOCALE: Record<string, string> = {
 
 export function ChatScreen() {
   const route = useRoute<ChatRouteProp>();
+  const navigation = useNavigation<Nav>();
   const { theme } = useTheme();
   const { t, language } = useTranslation();
   const stage = useAuthStore((s) => s.stage);
@@ -40,6 +43,7 @@ export function ChatScreen() {
   const messages = useChatStore((s) => s.messages);
   const sending = useChatStore((s) => s.sending);
   const degraded = useChatStore((s) => s.degraded);
+  const degradedReason = useChatStore((s) => s.degradedReason);
   const send = useChatStore((s) => s.send);
   const seedGreeting = useChatStore((s) => s.seedGreeting);
   const loadHistory = useChatStore((s) => s.loadHistory);
@@ -108,11 +112,25 @@ export function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         {degraded ? (
-          <View className="mx-4 mt-3 rounded-2xl bg-warn-100 px-3 py-2 dark:bg-amber-900/30">
-            <Text variant="caption" className="text-warn-600 dark:text-amber-200">
-              {t('chat.offlineNotice')}
-            </Text>
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open AI settings to enable full conversation"
+            onPress={() => navigation.navigate('AiSettings')}
+            className="mx-4 mt-3 flex-row items-center rounded-2xl bg-warn-100 px-3 py-2.5 dark:bg-amber-900/30"
+          >
+            <Icon name="shield" size={16} color={theme.warning} />
+            <View className="ml-2 flex-1">
+              <Text variant="caption" className="font-semibold text-warn-600 dark:text-amber-200">
+                {t('chat.offlineNotice')}
+              </Text>
+              {degradedReason ? (
+                <Text variant="caption" className="mt-0.5">
+                  {degradedReason}
+                </Text>
+              ) : null}
+            </View>
+            <Icon name="chevron" size={16} color={theme.warning} />
+          </Pressable>
         ) : null}
 
         <ScrollView

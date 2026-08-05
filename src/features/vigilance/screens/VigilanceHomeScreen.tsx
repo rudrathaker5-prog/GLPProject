@@ -4,8 +4,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { listAppointments, isUpcoming } from '@features/appointments/api/appointmentsRepository';
+import { CallDoctorCard } from '@features/doctors/components/CallDoctorCard';
 import { getDoctor } from '@features/doctors/api/doctorsRepository';
 import { listMilestones } from '@features/journey/api/journeyRepository';
 import { getProfile } from '@features/profile/api/profileRepository';
@@ -15,7 +16,6 @@ import {
   progressSummary,
 } from '@features/tracking/api/trackingRepository';
 import { WeightSparkline } from '@features/tracking/components/WeightSparkline';
-import { callNumber } from '@integrations/communication/communicationAdapter';
 import { useTranslation } from '@i18n/useTranslation';
 import {
   Badge,
@@ -30,7 +30,7 @@ import {
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 /**
  * Stage 3 home. The whole screen is organised around one question: is weight
@@ -237,32 +237,31 @@ export function VigilanceHomeScreen() {
 
           {/* Doctor */}
           <SectionTitle title={t('vigilance.callDoctor')} />
-          <Card>
-            <Text variant="body">
-              {doctor.data
-                ? `${doctor.data.fullName} — ${doctor.data.speciality}`
-                : 'You have no primary doctor saved. Anyone from the directory can review maintenance.'}
-            </Text>
-            <View className="mt-3 gap-2">
-              {doctor.data?.phone ? (
+          <CallDoctorCard
+            title="Something feels off?"
+            subtitle="You do not need to wait for a scheduled review. Call now, or book one."
+            urgent={riskBand === 'high'}
+          />
+          {doctor.data ? (
+            <Card className="mt-2">
+              <Row className="justify-between">
+                <View className="flex-1 pr-2">
+                  <Text variant="caption">Your primary doctor</Text>
+                  <Text variant="bodyStrong" className="mt-0.5">
+                    {doctor.data.fullName} — {doctor.data.speciality}
+                  </Text>
+                </View>
                 <Button
-                  label="Call now"
-                  fullWidth
-                  onPress={() => void callNumber(doctor.data?.phone)}
+                  label="Book review"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() =>
+                    navigation.navigate('BookAppointment', { doctorId: doctor.data!.id })
+                  }
                 />
-              ) : null}
-              <Button
-                label="Book a review"
-                variant="secondary"
-                fullWidth
-                onPress={() =>
-                  doctor.data
-                    ? navigation.navigate('BookAppointment', { doctorId: doctor.data.id })
-                    : navigation.navigate('Awareness', { screen: 'Doctors' })
-                }
-              />
-            </View>
-          </Card>
+              </Row>
+            </Card>
+          ) : null}
 
           {/* Upcoming appointment */}
           {(appointments.data ?? []).filter(isUpcoming).length > 0 ? (
@@ -282,7 +281,7 @@ export function VigilanceHomeScreen() {
             action={
               <Pressable
                 accessibilityRole="button"
-                onPress={() => navigation.navigate('Vigilance', { screen: 'Achievements' })}
+                onPress={() => navigation.navigate('Achievements')}
               >
                 <Text variant="label" className="text-brand-700 dark:text-brand-200">
                   {t('common.seeAll')}
@@ -306,12 +305,48 @@ export function VigilanceHomeScreen() {
             ) : null}
           </Row>
 
+          <SectionTitle title="Know the warning signs" />
+          <Card
+            onPress={() =>
+              navigation.navigate('EducationTopic', { topicId: 'side-effects' })
+            }
+          >
+            <Row className="justify-between">
+              <Row className="flex-1">
+                <Icon name="warning" size={18} color={theme.warning} />
+                <Text variant="subheading" className="ml-2 flex-1">
+                  Adverse events to watch for
+                </Text>
+              </Row>
+              <Icon name="chevron" size={18} color={theme.textMuted} />
+            </Row>
+            <Text variant="body" className="mt-2">
+              What is expected, what settles, and the few symptoms that need a doctor the same day —
+              even months after stopping treatment.
+            </Text>
+          </Card>
+
+          <Card
+            className="mt-2"
+            onPress={() => navigation.navigate('EducationTopic', { topicId: 'maintenance-plan' })}
+          >
+            <Row className="justify-between">
+              <Row className="flex-1">
+                <Icon name="shield" size={18} color={theme.primary} />
+                <Text variant="subheading" className="ml-2 flex-1">
+                  Building a maintenance plan that holds
+                </Text>
+              </Row>
+              <Icon name="chevron" size={18} color={theme.textMuted} />
+            </Row>
+          </Card>
+
           <Button
             className="mt-6"
             label="Talk to my coach"
             variant="secondary"
             fullWidth
-            onPress={() => navigation.navigate('Vigilance', { screen: 'Coach' })}
+            onPress={() => navigation.navigate('Chat')}
           />
         </View>
       </ScrollView>

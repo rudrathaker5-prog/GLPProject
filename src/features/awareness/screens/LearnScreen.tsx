@@ -3,14 +3,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { EducationTopic } from '@core/domain/types';
 import { EDUCATION_TOPICS, searchTopics } from '@features/awareness/content/education';
 import { Badge, Card, Chip, Input, Row, Screen, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 const CATEGORIES: { value: EducationTopic['category'] | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },

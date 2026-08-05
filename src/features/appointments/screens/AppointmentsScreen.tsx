@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { Appointment } from '@core/domain/types';
 import { isUpcoming, listAppointments } from '@features/appointments/api/appointmentsRepository';
 import { useTranslation } from '@i18n/useTranslation';
@@ -21,7 +21,7 @@ import {
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function AppointmentsScreen() {
   const navigation = useNavigation<Nav>();
@@ -48,7 +48,7 @@ export function AppointmentsScreen() {
           action={
             <Button
               label="Find a doctor"
-              onPress={() => navigation.navigate('Awareness', { screen: 'Doctors' })}
+              onPress={() => navigation.navigate('Doctors')}
             />
           }
         />

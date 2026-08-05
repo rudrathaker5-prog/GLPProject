@@ -3,7 +3,7 @@ import { useRoute, type RouteProp } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import {
   createPost,
   generateAlias,
@@ -25,7 +25,7 @@ import {
   Text,
 } from '@ui/components';
 
-type Props = RouteProp<RootStackParamList, 'PeerGroup'>;
+type Props = RouteProp<AllParamList, 'PeerGroup'>;
 
 export function PeerGroupScreen() {
   const route = useRoute<Props>();

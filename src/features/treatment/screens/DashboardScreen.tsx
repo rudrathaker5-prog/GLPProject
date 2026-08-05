@@ -4,10 +4,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { computeAdherence } from '@core/clinical/scoring';
 import type { DoseEvent, MedicationItem } from '@core/domain/types';
 import { isUpcoming, listAppointments } from '@features/appointments/api/appointmentsRepository';
+import { CallDoctorCard } from '@features/doctors/components/CallDoctorCard';
 import { listDoctorNotes } from '@features/doctorNotes/api/doctorNotesRepository';
 import {
   listDoseEvents,
@@ -36,7 +37,7 @@ import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 import { WeightSparkline } from '@features/tracking/components/WeightSparkline';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
@@ -136,7 +137,7 @@ export function DashboardScreen() {
           {uncelebrated ? (
             <Card
               className="mt-4 border-vital-300 bg-vital-50 dark:border-vital-800 dark:bg-vital-900/20"
-              onPress={() => navigation.navigate('Treatment', { screen: 'Journey' })}
+              onPress={() => navigation.navigate('JourneyMap')}
             >
               <Row>
                 <Icon name="trophy" size={22} color="#0b955c" />
@@ -366,21 +367,27 @@ export function DashboardScreen() {
               action={
                 <Button
                   label="Find a doctor"
-                  onPress={() => navigation.navigate('Awareness', { screen: 'Doctors' })}
+                  onPress={() => navigation.navigate('Doctors')}
                 />
               }
             />
           )}
 
+          {/* Reach a human */}
+          <SectionTitle title="Need to speak to someone?" />
+          <CallDoctorCard
+            subtitle="Side effects, doubts, or something that does not feel right — call, do not wait."
+          />
+
           {/* Everything else */}
           <SectionTitle title="Your care" />
           <View className="flex-row flex-wrap justify-between">
-            <NavTile icon="chat" label={t('treatment.aiCoach')} onPress={() => navigation.navigate('Treatment', { screen: 'Coach' })} />
+            <NavTile icon="chat" label={t('treatment.aiCoach')} onPress={() => navigation.navigate('Chat')} />
             <NavTile icon="pill" label={t('medication.title')} onPress={() => navigation.navigate('Medication')} />
             <NavTile icon="camera" label={t('treatment.prescription')} onPress={() => navigation.navigate('PrescriptionUpload')} />
-            <NavTile icon="nutrition" label={t('treatment.nutrition')} onPress={() => navigation.navigate('Treatment', { screen: 'Nutrition' })} />
+            <NavTile icon="nutrition" label={t('treatment.nutrition')} onPress={() => navigation.navigate('Nutrition')} />
             <NavTile icon="doctor" label={t('treatment.doctorNotes')} onPress={() => navigation.navigate('DoctorNotes')} />
-            <NavTile icon="chart" label={t('treatment.journeyMap')} onPress={() => navigation.navigate('Treatment', { screen: 'Journey' })} />
+            <NavTile icon="chart" label={t('treatment.journeyMap')} onPress={() => navigation.navigate('JourneyMap')} />
             <NavTile icon="refresh" label={t('treatment.refillStatus')} onPress={() => navigation.navigate('Refill', {})} />
             <NavTile icon="people" label={t('treatment.peerSupport')} onPress={() => navigation.navigate('PeerSupport')} />
           </View>

@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { computeAdherence, computeWellnessScore } from '@core/clinical/scoring';
 import { listDoseEvents } from '@features/medication/api/medicationRepository';
 import { listMilestones, MILESTONE_LABELS } from '@features/journey/api/journeyRepository';
@@ -24,7 +24,7 @@ import {
   Text,
 } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 export function ProgressScreen() {
   const navigation = useNavigation<Nav>();

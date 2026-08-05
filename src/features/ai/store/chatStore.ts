@@ -4,12 +4,14 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { COLLECTIONS, newId, nowIso, readCollection, writeCollection } from '@core/data/localDb';
 import type { AgentCard, ChatMessage, JourneyStage, LanguageCode } from '@core/domain/types';
 import { storage } from '@core/storage/storage';
-import { runAgentTurn, userMessage } from '@features/ai/agent/careAgent';
+import { runAgentTurn, userMessage, type AgentSource } from '@features/ai/agent/careAgent';
 
 interface ChatState {
   conversationId: string | null;
   messages: ChatMessage[];
   sending: boolean;
+  /** Which engine answered the last turn — shown honestly in the chat header. */
+  source: AgentSource;
   degraded: boolean;
   degradedReason: string | null;
   error: string | null;
@@ -32,6 +34,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
       conversationId: null,
       messages: [],
       sending: false,
+      source: 'offline',
       degraded: false,
       degradedReason: null,
       error: null,
@@ -73,7 +76,8 @@ export const useChatStore = create<ChatState & ChatActions>()(
               .concat(result.assistantMessage)
               .slice(-MAX_MESSAGES_IN_MEMORY),
             sending: false,
-            degraded: result.degraded,
+            source: result.source,
+            degraded: result.source === 'offline',
             degradedReason: result.degradedReason ?? null,
           }));
 
@@ -152,7 +156,8 @@ export const useChatStore = create<ChatState & ChatActions>()(
         set({ messages: stored.slice(-MAX_MESSAGES_IN_MEMORY), hydrated: true });
       },
 
-      reset: () => set({ conversationId: null, messages: [], error: null, degraded: false }),
+      reset: () =>
+        set({ conversationId: null, messages: [], error: null, degraded: false, degradedReason: null }),
     }),
     {
       name: 'glpcare.chat',

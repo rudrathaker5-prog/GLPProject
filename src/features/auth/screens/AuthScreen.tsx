@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { isBackendConfigured } from '@core/supabase/client';
 import { useAuthStore } from '@features/auth/store/authStore';
 import { migrateLocalProfileToAccount } from '@features/profile/api/profileRepository';
@@ -11,8 +11,8 @@ import { registerForPush } from '@features/notifications/service/notificationSer
 import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Button, Card, Chip, Field, Input, Row, Screen, Text } from '@ui/components';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'Auth'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'Auth'>;
 
 type Method = 'phone' | 'email';
 

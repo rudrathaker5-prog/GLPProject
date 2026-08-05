@@ -1,14 +1,14 @@
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { MYTHS } from '@features/awareness/content/myths';
 import { Badge, Button, Card, EmptyState, Screen, Text } from '@ui/components';
 
 import { verdictLabel, verdictTone } from './MythsScreen';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<RootStackParamList, 'MythDetail'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'MythDetail'>;
 
 export function MythDetailScreen() {
   const route = useRoute<Props>();

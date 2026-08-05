@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import type { JourneyEvent, JourneyEventType } from '@core/domain/types';
 import { listJourneyEvents, listMilestones } from '@features/journey/api/journeyRepository';
 import { getProfile } from '@features/profile/api/profileRepository';
@@ -23,7 +23,7 @@ import {
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 const EVENT_ICON: Record<JourneyEventType, IconName> = {
   diagnosis: 'shield',

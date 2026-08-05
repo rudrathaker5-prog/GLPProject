@@ -3,6 +3,10 @@ import type { Doctor, Hospital } from '@core/domain/types';
 /**
  * Bundled care-team directory.
  *
+ * The two consulting numbers below are live and reachable — every "Call"
+ * button in the app dials one of them through the OS dialler. Replace them
+ * along with the rest of this directory before wider release.
+ *
  * Used when the app runs without a Supabase project (fresh install, offline,
  * pilot build). Mirrors `supabase/seed.sql` exactly so behaviour does not change
  * when the backend is switched on. Replace both with the real network before
@@ -16,7 +20,7 @@ export const FALLBACK_HOSPITALS: Hospital[] = [
     name: 'Sterling Metabolic Institute',
     city: 'Ahmedabad',
     address: 'Nr. Judges Bungalow Road, Bodakdev, Ahmedabad 380054',
-    phone: '+917940001001',
+    phone: '+918879511005',
     latitude: 23.0396,
     longitude: 72.51,
     hasObesityClinic: true,
@@ -27,7 +31,7 @@ export const FALLBACK_HOSPITALS: Hospital[] = [
     name: 'Civil Endocrine & Obesity Centre',
     city: 'Ahmedabad',
     address: 'Asarwa, Ahmedabad 380016',
-    phone: '+917940001002',
+    phone: '+918879511005',
     latitude: 23.053,
     longitude: 72.605,
     hasObesityClinic: true,
@@ -38,7 +42,7 @@ export const FALLBACK_HOSPITALS: Hospital[] = [
     name: 'Sahyadri Weight Care Clinic',
     city: 'Pune',
     address: 'Karve Road, Deccan Gymkhana, Pune 411004',
-    phone: '+912040002001',
+    phone: '+918879511005',
     latitude: 18.51,
     longitude: 73.84,
     hasObesityClinic: true,
@@ -49,7 +53,7 @@ export const FALLBACK_HOSPITALS: Hospital[] = [
     name: 'Mumbai Diabetes & Obesity Hospital',
     city: 'Mumbai',
     address: 'Dr. Annie Besant Road, Worli, Mumbai 400018',
-    phone: '+912240003001',
+    phone: '+918879511005',
     latitude: 19.002,
     longitude: 72.818,
     hasObesityClinic: true,
@@ -60,7 +64,7 @@ export const FALLBACK_HOSPITALS: Hospital[] = [
     name: 'Delhi Metabolic Health Centre',
     city: 'Delhi',
     address: 'Sector 8, Rohini, New Delhi 110085',
-    phone: '+911140004001',
+    phone: '+918879511005',
     latitude: 28.7,
     longitude: 77.11,
     hasObesityClinic: true,
@@ -86,7 +90,7 @@ export const FALLBACK_DOCTORS: Doctor[] = [
     rating: 4.8,
     yearsExperience: 14,
     photoUrl: null,
-    phone: '+919825000001',
+    phone: '+918879511005',
     bio: 'Runs a dedicated GLP-1 titration clinic and has managed over 2,000 patients through medical weight management.',
   },
   {
@@ -104,7 +108,7 @@ export const FALLBACK_DOCTORS: Doctor[] = [
     rating: 4.6,
     yearsExperience: 18,
     photoUrl: null,
-    phone: '+919825000002',
+    phone: '+917986791522',
     bio: 'Focuses on non-surgical metabolic care first, with surgery reserved for clearly indicated cases.',
   },
   {
@@ -122,7 +126,7 @@ export const FALLBACK_DOCTORS: Doctor[] = [
     rating: 4.9,
     yearsExperience: 11,
     photoUrl: null,
-    phone: '+919822000003',
+    phone: '+918879511005',
     bio: 'Special interest in PCOS, insulin resistance and behaviour-first obesity care.',
   },
   {
@@ -140,7 +144,7 @@ export const FALLBACK_DOCTORS: Doctor[] = [
     rating: 4.7,
     yearsExperience: 20,
     photoUrl: null,
-    phone: '+919820000004',
+    phone: '+917986791522',
     bio: 'Manages type 2 diabetes with obesity, with emphasis on cardiovascular risk reduction.',
   },
   {
@@ -158,7 +162,17 @@ export const FALLBACK_DOCTORS: Doctor[] = [
     rating: 4.5,
     yearsExperience: 9,
     photoUrl: null,
-    phone: '+919810000005',
+    phone: '+918879511005',
     bio: 'Builds Indian-diet-first nutrition plans alongside medical therapy.',
   },
 ];
+
+
+/**
+ * The two doctors surfaced by default for "Talk to a doctor", the AI's
+ * escalation cards, and the one-tap call blocks in every stage.
+ */
+export const PRIMARY_DOCTORS: Doctor[] = [FALLBACK_DOCTORS[0], FALLBACK_DOCTORS[1]];
+
+/** Reachable consulting numbers, in E.164 so `tel:` works on every device. */
+export const PRIMARY_DOCTOR_NUMBERS = ['+918879511005', '+917986791522'] as const;

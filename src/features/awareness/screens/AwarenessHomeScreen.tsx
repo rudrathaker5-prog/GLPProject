@@ -5,20 +5,21 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { capabilities } from '@core/config/env';
 import { quickQuestions } from '@features/ai/engine/localEngine';
 import { VoiceInputButton } from '@features/ai/components/VoiceInputButton';
 import { useAuthStore } from '@features/auth/store/authStore';
 import { EDUCATION_TOPICS } from '@features/awareness/content/education';
 import { MYTHS } from '@features/awareness/content/myths';
+import { CallDoctorCard } from '@features/doctors/components/CallDoctorCard';
 import { LanguagePicker } from '@features/settings/components/LanguagePicker';
 import { useTranslation } from '@i18n/useTranslation';
-import { Badge, Card, Row, Text } from '@ui/components';
+import { Badge, Button, Card, Row, SectionTitle, Text } from '@ui/components';
 import { Icon, type IconName } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 /**
  * Stage 1 home.
@@ -160,6 +161,34 @@ export function AwarenessHomeScreen() {
           </LinearGradient>
         </View>
 
+        {/* The reframe that does the most work in this stage */}
+        <View className="px-5 pt-5">
+          <Card
+            className="border-vital-200 bg-vital-50 dark:border-vital-800 dark:bg-vital-900/20"
+            onPress={() =>
+              navigation.navigate('EducationTopic', { topicId: 'obesity-is-a-disease' })
+            }
+          >
+            <Row className="justify-between">
+              <Row className="flex-1">
+                <Icon name="heart" size={18} color="#0b955c" />
+                <Text variant="subheading" className="ml-2 flex-1">
+                  Obesity is a medical condition
+                </Text>
+              </Row>
+              <Icon name="chevron" size={18} color={theme.textMuted} />
+            </Row>
+            <Text variant="body" className="mt-2">
+              Not a willpower problem. Your body actively defends its highest weight by raising
+              hunger hormones and lowering the energy you burn — which is exactly why dieting alone
+              so often fails. That is biology, not character.
+            </Text>
+            <Text variant="caption" className="mt-2">
+              WHO · ICMR-NIN · 4 min read
+            </Text>
+          </Card>
+        </View>
+
         {/* Quick questions */}
         <View className="px-5">
           <Text variant="heading" className="mb-3 mt-6">
@@ -198,23 +227,29 @@ export function AwarenessHomeScreen() {
               title={t('awareness.learnObesity')}
               subtitle={`${EDUCATION_TOPICS.length} evidence-based topics`}
               tone="vital"
-              onPress={() => navigation.navigate('Awareness', { screen: 'Learn' })}
+              onPress={() => navigation.navigate('Learn')}
             />
             <ActionTile
               icon="sparkle"
               title={t('awareness.mythsVsFacts')}
               subtitle={`${MYTHS.length} myths, answered`}
               tone="warn"
-              onPress={() => navigation.navigate('Awareness', { screen: 'Myths' })}
+              onPress={() => navigation.navigate('Myths')}
             />
             <ActionTile
               icon="doctor"
               title={t('awareness.talkToDoctor')}
               subtitle="Obesity clinics near you"
               tone="brand"
-              onPress={() => navigation.navigate('Awareness', { screen: 'Doctors' })}
+              onPress={() => navigation.navigate('Doctors')}
             />
           </View>
+        </View>
+
+        {/* Talk to a doctor, one tap */}
+        <View className="px-5">
+          <SectionTitle title={t('awareness.talkToDoctor')} />
+          <CallDoctorCard subtitle="Only a registered doctor can prescribe. Call now, or book a consultation." />
         </View>
 
         {/* Ready for treatment */}
@@ -234,13 +269,33 @@ export function AwarenessHomeScreen() {
         </View>
 
         {/* Honest status */}
-        <View className="px-5 pt-4">
-          <Text variant="caption" className="text-center">
-            {capabilities.remoteAi
-              ? 'Connected to the care service.'
-              : 'Running on the built-in care library — connect a backend for full AI coaching.'}
-          </Text>
-          <Text variant="caption" className="mt-1 text-center">
+        <View className="px-5 pt-6">
+          {capabilities.remoteAi ? (
+            <Text variant="caption" className="text-center">
+              Connected to the care service.
+            </Text>
+          ) : (
+            <Card>
+              <Row>
+                <Icon name="sparkle" size={18} color={theme.primary} />
+                <Text variant="subheading" className="ml-2 flex-1">
+                  Unlock full conversation
+                </Text>
+              </Row>
+              <Text variant="body" className="mt-1">
+                Saathi is answering from the built-in care library right now. Add your own AI key to
+                get free-flowing coaching with memory and your health context.
+              </Text>
+              <Button
+                className="mt-3"
+                label="Set up AI"
+                variant="secondary"
+                fullWidth
+                onPress={() => navigation.navigate('AiSettings')}
+              />
+            </Card>
+          )}
+          <Text variant="caption" className="mt-3 text-center">
             {t('safety.notMedicalAdvice')}
           </Text>
         </View>

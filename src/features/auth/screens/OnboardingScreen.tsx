@@ -3,7 +3,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import { openTab } from '@/app/navigation/tabs';
+import type { AllParamList } from '@/app/navigation/types';
 import type { JourneyStage } from '@core/domain/types';
 import { useAuthStore } from '@features/auth/store/authStore';
 import { addJourneyEvent } from '@features/journey/api/journeyRepository';
@@ -15,7 +16,7 @@ import { Button, Card, Field, Input, ProgressBar, Row, Screen, Text } from '@ui/
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 /**
  * Treatment onboarding.
@@ -88,10 +89,11 @@ export function OnboardingScreen() {
       }
 
       setStage(stage);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: stage === 'treatment' ? 'Treatment' : 'Vigilance' }],
-      });
+
+      // The tabs are always present, so finishing setup just moves the user to
+      // the right one rather than rebuilding the navigator.
+      navigation.goBack();
+      openTab(navigation, stage === 'treatment' ? 'JourneyTab' : 'VigilanceTab');
     } catch (error) {
       Alert.alert(
         'Could not finish setup',

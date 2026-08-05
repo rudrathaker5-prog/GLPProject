@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import type { AwarenessTabParamList, RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import { INDIAN_CITIES, listDoctors } from '@features/doctors/api/doctorsRepository';
 import { callNumber } from '@integrations/communication/communicationAdapter';
 import { useTranslation } from '@i18n/useTranslation';
@@ -24,8 +24,8 @@ import {
 import { Icon } from '@ui/components/Icon';
 import { useTheme } from '@ui/theme/ThemeProvider';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Props = RouteProp<AwarenessTabParamList, 'Doctors'>;
+type Nav = NativeStackNavigationProp<AllParamList>;
+type Props = RouteProp<AllParamList, 'Doctors'>;
 
 export function DoctorsScreen() {
   const navigation = useNavigation<Nav>();

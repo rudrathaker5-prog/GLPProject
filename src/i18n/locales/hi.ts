@@ -38,6 +38,9 @@ export const hi: DeepPartial<TranslationShape> = {
   },
 
   tabs: {
+    awareness: 'जागरूकता',
+    myJourney: 'मेरी यात्रा',
+    stayingWell: 'स्वस्थ रहें',
     home: 'होम',
     learn: 'जानें',
     doctors: 'डॉक्टर',

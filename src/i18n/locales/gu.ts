@@ -38,6 +38,9 @@ export const gu: DeepPartial<TranslationShape> = {
   },
 
   tabs: {
+    awareness: 'જાગૃતિ',
+    myJourney: 'મારી સફર',
+    stayingWell: 'સ્વસ્થ રહો',
     home: 'હોમ',
     learn: 'શીખો',
     doctors: 'ડૉક્ટર',

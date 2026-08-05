@@ -34,6 +34,9 @@ export const en = {
   },
 
   tabs: {
+    awareness: 'Awareness',
+    myJourney: 'My Journey',
+    stayingWell: 'Staying Well',
     home: 'Home',
     learn: 'Learn',
     doctors: 'Doctors',

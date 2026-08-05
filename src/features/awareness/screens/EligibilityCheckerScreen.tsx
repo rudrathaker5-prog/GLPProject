@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import type { RootStackParamList } from '@/app/navigation/types';
+import type { AllParamList } from '@/app/navigation/types';
 import {
   comorbidityLabel,
   contraindicationLabel,
@@ -34,7 +34,7 @@ import {
 } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<AllParamList>;
 
 const schema = z.object({
   heightCm: z
@@ -256,7 +256,7 @@ export function EligibilityCheckerScreen() {
         onPress={onSubmit}
       />
 
-      {result ? <ResultCard result={result} onTalkToDoctor={() => navigation.navigate('Awareness', { screen: 'Doctors' })} onAsk={() => navigation.navigate('Chat', { initialPrompt: 'Can you explain my eligibility result in simple terms?' })} /> : null}
+      {result ? <ResultCard result={result} onTalkToDoctor={() => navigation.navigate('Doctors')} onAsk={() => navigation.navigate('Chat', { initialPrompt: 'Can you explain my eligibility result in simple terms?' })} /> : null}
     </Screen>
   );
 }
