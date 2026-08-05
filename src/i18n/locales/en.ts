@@ -86,7 +86,88 @@ export const en = {
     checkins: 'Check-ins',
   },
 
+  home: {
+    appName: 'GLP Care',
+    coachName: 'Saathi — your care coach',
+    openConversation: 'Open the full conversation',
+    diseaseCardTitle: 'Obesity is a medical condition',
+    diseaseCardBody:
+      'Not a willpower problem. Your body actively defends its highest weight by raising hunger hormones and lowering the energy you burn — which is exactly why dieting alone so often fails. That is biology, not character.',
+    diseaseCardSource: 'WHO · ICMR-NIN · 4 min read',
+    explore: 'Explore',
+    eligibilitySubtitle: 'Indian BMI & waist thresholds',
+    learnSubtitle: '{{count}} evidence-based topics',
+    mythsSubtitle: '{{count}} myths, answered',
+    doctorsSubtitle: 'Obesity clinics near you',
+    prescribeNote: 'Only a registered doctor can prescribe. Call now, or book a consultation.',
+    startTreatmentBody:
+      'Already under a doctor’s care, or ready to be? Set up your treatment dashboard, reminders and coaching.',
+    connected: 'Connected to the care service.',
+    unlockTitle: 'Unlock full conversation',
+    unlockBody:
+      'Saathi is answering from the built-in care library right now. Add your own AI key to get free-flowing coaching with memory and your health context.',
+    setUpAi: 'Set up AI',
+  },
+
+  journeyHome: {
+    gettingReady: 'Getting ready',
+    treatmentSpace: 'Your treatment space',
+    heroTitle: 'This is where your treatment lives',
+    heroBody:
+      'Doses, reminders, weight, nutrition and your coach — all here once you begin. Nothing is locked. You can set it up now or come back later.',
+    setUp: 'Set up my treatment',
+    canDoNow: 'You can do this now',
+    coachTitle: 'Talk to your care coach',
+    coachBody:
+      'Ask about starting treatment, side effects, cost, or whether you are ready. It handles CBT, ACT and motivational-interviewing style conversations.',
+    coachCta: 'Open the coach',
+    coachPrompt: 'I am thinking about starting treatment. Can you help me decide?',
+    prescriptionTitle: 'Already have a prescription?',
+    prescriptionBody:
+      'Photograph it and your medicines, dose schedule and reminders are created automatically.',
+    prescriptionCta: 'Add prescription',
+    doctorTitle: 'Speak to a doctor',
+    doctorBody: 'Call directly, or book an in-person or video consultation.',
+    doctorCta: 'See doctors',
+    trackTitle: 'Start tracking',
+    trackBody:
+      'Log today’s weight to set your baseline. Percentage change from here is what matters clinically.',
+    trackCta: 'Log weight',
+    callNow: 'Call a doctor now',
+    call: 'Call',
+  },
+
+  vigilanceHome: {
+    drivingIt: 'What is driving it',
+    weightWatch: 'Weight watch',
+    lowest: 'Lowest',
+    drift: 'Drift',
+    thresholdNote:
+      'Your action threshold is 3% above your lowest. Crossing it means act, not worry.',
+    doCheckIn: 'Do a check-in',
+    remindMe: 'Remind me at 3, 6 and 12 months',
+    somethingOff: 'Something feels off?',
+    somethingOffBody:
+      'You do not need to wait for a scheduled review. Call now, or book one.',
+    primaryDoctor: 'Your primary doctor',
+    bookReview: 'Book review',
+    nextAppointment: 'Next appointment',
+    milestonesLocked:
+      'Maintenance milestones unlock at 6 and 12 months of holding your loss.',
+    warningSigns: 'Know the warning signs',
+    adverseEvents: 'Adverse events to watch for',
+    maintenancePlan: 'Building a maintenance plan that holds',
+    talkToCoach: 'Talk to my coach',
+  },
+
   awareness: {
+    mythWhatIsGoingOn: 'What is actually going on',
+    mythEvidence: 'The evidence',
+    mythToBeClear: 'And to be clear',
+    englishOnlyTitle: 'This article is in English',
+    englishOnlyBody:
+      'The care library is written from WHO and ICMR-NIN sources and has not been translated yet. Ask your care coach about it in your own language — it will explain the same guidance and can answer follow-up questions.',
+    askCoach: 'Ask the coach in my language',
     greeting: 'How can I help you today?',
     heroTitle: 'Your obesity care companion',
     heroSubtitle:

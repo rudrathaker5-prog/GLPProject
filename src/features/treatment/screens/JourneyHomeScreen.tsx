@@ -53,7 +53,7 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
         <View className="flex-row items-center justify-between px-5 pt-2">
           <View className="flex-1">
             <Text variant="caption">{t('tabs.myJourney')}</Text>
-            <Text variant="display">Getting ready</Text>
+            <Text variant="display">{t('journeyHome.gettingReady')}</Text>
           </View>
           <IconButton
             name="profile"
@@ -80,20 +80,19 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
             <Row className="mb-2">
               <Icon name="heart" size={18} color="#ffffff" />
               <Text variant="label" className="ml-2 text-white/90">
-                Your treatment space
+                {t('journeyHome.treatmentSpace')}
               </Text>
             </Row>
             <Text variant="title" className="text-white">
-              This is where your treatment lives
+              {t('journeyHome.heroTitle')}
             </Text>
             <Text variant="body" className="mt-2 text-white/90">
-              Doses, reminders, weight, nutrition and your coach — all here once you begin. Nothing
-              is locked. You can set it up now or come back later.
+              {t('journeyHome.heroBody')}
             </Text>
 
             <View className="mt-4">
               <Button
-                label="Set up my treatment"
+                label={t('journeyHome.setUp')}
                 variant="secondary"
                 fullWidth
                 onPress={() => navigation.navigate('Onboarding')}
@@ -104,48 +103,48 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
 
         {/* Things that work right now, before anything is set up */}
         <View className="px-5">
-          <SectionTitle title="You can do this now" />
+          <SectionTitle title={t('journeyHome.canDoNow')} />
 
           <ActionRow
             icon="chat"
-            title="Talk to your care coach"
-            body="Ask about starting treatment, side effects, cost, or whether you are ready. It handles CBT, ACT and motivational-interviewing style conversations."
-            cta="Open the coach"
+            title={t('journeyHome.coachTitle')}
+            body={t('journeyHome.coachBody')}
+            cta={t('journeyHome.coachCta')}
             onPress={() =>
               navigation.navigate('Chat', {
-                initialPrompt: 'I am thinking about starting treatment. Can you help me decide?',
+                initialPrompt: t('journeyHome.coachPrompt'),
               })
             }
           />
 
           <ActionRow
             icon="camera"
-            title="Already have a prescription?"
-            body="Photograph it and your medicines, dose schedule and reminders are created automatically."
-            cta="Add prescription"
+            title={t('journeyHome.prescriptionTitle')}
+            body={t('journeyHome.prescriptionBody')}
+            cta={t('journeyHome.prescriptionCta')}
             onPress={() => navigation.navigate('PrescriptionUpload')}
           />
 
           <ActionRow
             icon="doctor"
-            title="Speak to a doctor"
-            body="Call directly, or book an in-person or video consultation."
-            cta="See doctors"
+            title={t('journeyHome.doctorTitle')}
+            body={t('journeyHome.doctorBody')}
+            cta={t('journeyHome.doctorCta')}
             onPress={() => navigation.navigate('Doctors')}
           />
 
           <ActionRow
             icon="chart"
-            title="Start tracking"
-            body="Log today's weight to set your baseline. Percentage change from here is what matters clinically."
-            cta="Log weight"
+            title={t('journeyHome.trackTitle')}
+            body={t('journeyHome.trackBody')}
+            cta={t('journeyHome.trackCta')}
             onPress={() => navigation.navigate('LogWeight')}
           />
         </View>
 
         {/* One-tap doctor calls */}
         <View className="px-5">
-          <SectionTitle title="Call a doctor now" />
+          <SectionTitle title={t('journeyHome.callNow')} />
           {PRIMARY_DOCTORS.map((doctor) => (
             <Card key={doctor.id} className="mb-2">
               <Row className="justify-between">
@@ -156,7 +155,7 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
                   </Text>
                 </View>
                 <Button
-                  label="Call"
+                  label={t('journeyHome.call')}
                   size="sm"
                   icon={<Icon name="phone" size={16} color="#ffffff" />}
                   onPress={() => void callNumber(doctor.phone)}

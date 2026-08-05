@@ -54,7 +54,7 @@ export function AwarenessHomeScreen() {
           <Row>
             <Icon name="heart" size={22} color={theme.primary} />
             <Text variant="subheading" className="ml-2">
-              GLP Care
+              {t('home.appName')}
             </Text>
           </Row>
           <Row>
@@ -102,7 +102,7 @@ export function AwarenessHomeScreen() {
             <Row className="mb-2">
               <Icon name="sparkle" size={18} color="#ffffff" />
               <Text variant="label" className="ml-2 text-white/90">
-                Saathi — your care coach
+                {t('home.coachName')}
               </Text>
             </Row>
 
@@ -157,7 +157,7 @@ export function AwarenessHomeScreen() {
             >
               <Row>
                 <Text variant="label" className="text-white">
-                  Open the full conversation
+                  {t('home.openConversation')}
                 </Text>
                 <View className="ml-1">
                   <Icon name="chevron" size={16} color="#ffffff" />
@@ -179,18 +179,16 @@ export function AwarenessHomeScreen() {
               <Row className="flex-1">
                 <Icon name="heart" size={18} color="#0b955c" />
                 <Text variant="subheading" className="ml-2 flex-1">
-                  Obesity is a medical condition
+                  {t('home.diseaseCardTitle')}
                 </Text>
               </Row>
               <Icon name="chevron" size={18} color={theme.textMuted} />
             </Row>
             <Text variant="body" className="mt-2">
-              Not a willpower problem. Your body actively defends its highest weight by raising
-              hunger hormones and lowering the energy you burn — which is exactly why dieting alone
-              so often fails. That is biology, not character.
+              {t('home.diseaseCardBody')}
             </Text>
             <Text variant="caption" className="mt-2">
-              WHO · ICMR-NIN · 4 min read
+              {t('home.diseaseCardSource')}
             </Text>
           </Card>
         </View>
@@ -217,35 +215,35 @@ export function AwarenessHomeScreen() {
         {/* Structured entry points */}
         <View className="px-5">
           <Text variant="heading" className="mb-3 mt-6">
-            Explore
+            {t('home.explore')}
           </Text>
 
           <View className="flex-row flex-wrap justify-between">
             <ActionTile
               icon="shield"
               title={t('awareness.eligibilityChecker')}
-              subtitle="Indian BMI & waist thresholds"
+              subtitle={t('home.eligibilitySubtitle')}
               tone="brand"
               onPress={() => navigation.navigate('EligibilityChecker')}
             />
             <ActionTile
               icon="learn"
               title={t('awareness.learnObesity')}
-              subtitle={`${EDUCATION_TOPICS.length} evidence-based topics`}
+              subtitle={t('home.learnSubtitle', { count: EDUCATION_TOPICS.length })}
               tone="vital"
               onPress={() => navigation.navigate('Learn')}
             />
             <ActionTile
               icon="sparkle"
               title={t('awareness.mythsVsFacts')}
-              subtitle={`${MYTHS.length} myths, answered`}
+              subtitle={t('home.mythsSubtitle', { count: MYTHS.length })}
               tone="warn"
               onPress={() => navigation.navigate('Myths')}
             />
             <ActionTile
               icon="doctor"
               title={t('awareness.talkToDoctor')}
-              subtitle="Obesity clinics near you"
+              subtitle={t('home.doctorsSubtitle')}
               tone="brand"
               onPress={() => navigation.navigate('Doctors')}
             />
@@ -255,7 +253,7 @@ export function AwarenessHomeScreen() {
         {/* Talk to a doctor, one tap */}
         <View className="px-5">
           <SectionTitle title={t('awareness.talkToDoctor')} />
-          <CallDoctorCard subtitle="Only a registered doctor can prescribe. Call now, or book a consultation." />
+          <CallDoctorCard subtitle={t('home.prescribeNote')} />
         </View>
 
         {/* Ready for treatment */}
@@ -265,8 +263,7 @@ export function AwarenessHomeScreen() {
               <View className="flex-1 pr-3">
                 <Text variant="subheading">{t('awareness.startTreatment')}</Text>
                 <Text variant="body" className="mt-1">
-                  Already under a doctor&apos;s care, or ready to be? Set up your treatment
-                  dashboard, reminders and coaching.
+                  {t('home.startTreatmentBody')}
                 </Text>
               </View>
               <Icon name="chevron" size={20} color={theme.textMuted} />
@@ -278,23 +275,22 @@ export function AwarenessHomeScreen() {
         <View className="px-5 pt-6">
           {capabilities.remoteAi ? (
             <Text variant="caption" className="text-center">
-              Connected to the care service.
+              {t('home.connected')}
             </Text>
           ) : (
             <Card>
               <Row>
                 <Icon name="sparkle" size={18} color={theme.primary} />
                 <Text variant="subheading" className="ml-2 flex-1">
-                  Unlock full conversation
+                  {t('home.unlockTitle')}
                 </Text>
               </Row>
               <Text variant="body" className="mt-1">
-                Saathi is answering from the built-in care library right now. Add your own AI key to
-                get free-flowing coaching with memory and your health context.
+                {t('home.unlockBody')}
               </Text>
               <Button
                 className="mt-3"
-                label="Set up AI"
+                label={t('home.setUpAi')}
                 variant="secondary"
                 fullWidth
                 onPress={() => navigation.navigate('AiSettings')}

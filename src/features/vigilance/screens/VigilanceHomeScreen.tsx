@@ -201,7 +201,7 @@ export function VigilanceHomeScreen() {
             {(risk.data?.signals ?? []).length > 0 ? (
               <View className="mt-4">
                 <Text variant="label" className="mb-1">
-                  What is driving it
+                  {t('vigilanceHome.drivingIt')}
                 </Text>
                 {(risk.data?.signals ?? []).map((signal) => (
                   <Row key={signal} className="mb-1">
@@ -235,12 +235,12 @@ export function VigilanceHomeScreen() {
           </Card>
 
           {/* Weight watch */}
-          <SectionTitle title="Weight watch" />
+          <SectionTitle title={t('vigilanceHome.weightWatch')} />
           <Row className="gap-2">
-            <StatTile label="Lowest" value={progress.data?.nadirKg ?? '—'} unit="kg" tone="success" />
+            <StatTile label={t('vigilanceHome.lowest')} value={progress.data?.nadirKg ?? '—'} unit="kg" tone="success" />
             <StatTile label="Now" value={progress.data?.currentWeightKg ?? '—'} unit="kg" tone="brand" />
             <StatTile
-              label="Drift"
+              label={t('vigilanceHome.drift')}
               value={regainKg !== null ? (regainKg > 0 ? `+${regainKg}` : regainKg) : '—'}
               unit="kg"
               tone={regainKg !== null && regainKg > 2 ? 'warning' : 'neutral'}
@@ -259,7 +259,7 @@ export function VigilanceHomeScreen() {
             </Row>
             <WeightSparkline entries={progress.data?.entries ?? []} height={140} />
             <Text variant="caption" className="mt-3">
-              Your action threshold is 3% above your lowest. Crossing it means act, not worry.
+              {t('vigilanceHome.thresholdNote')}
             </Text>
           </Card>
 
@@ -282,14 +282,14 @@ export function VigilanceHomeScreen() {
             ) : null}
             <Button
               className="mt-3"
-              label="Do a check-in"
+              label={t('vigilanceHome.doCheckIn')}
               fullWidth
               onPress={() => navigation.navigate('CheckIn', { kind: 'vigilance' })}
             />
             {nextCheckpoint && !followUpsArmed ? (
               <Button
                 className="mt-2"
-                label="Remind me at 3, 6 and 12 months"
+                label={t('vigilanceHome.remindMe')}
                 variant="secondary"
                 fullWidth
                 loading={armFollowUps.isPending}
@@ -301,21 +301,21 @@ export function VigilanceHomeScreen() {
           {/* Doctor */}
           <SectionTitle title={t('vigilance.callDoctor')} />
           <CallDoctorCard
-            title="Something feels off?"
-            subtitle="You do not need to wait for a scheduled review. Call now, or book one."
+            title={t('vigilanceHome.somethingOff')}
+            subtitle={t('vigilanceHome.somethingOffBody')}
             urgent={riskBand === 'high'}
           />
           {doctor.data ? (
             <Card className="mt-2">
               <Row className="justify-between">
                 <View className="flex-1 pr-2">
-                  <Text variant="caption">Your primary doctor</Text>
+                  <Text variant="caption">{t('vigilanceHome.primaryDoctor')}</Text>
                   <Text variant="bodyStrong" className="mt-0.5">
                     {doctor.data.fullName} — {doctor.data.speciality}
                   </Text>
                 </View>
                 <Button
-                  label="Book review"
+                  label={t('vigilanceHome.bookReview')}
                   size="sm"
                   variant="secondary"
                   onPress={() =>
@@ -329,7 +329,7 @@ export function VigilanceHomeScreen() {
           {/* Upcoming appointment */}
           {(appointments.data ?? []).filter(isUpcoming).length > 0 ? (
             <Card className="mt-3">
-              <Text variant="label">Next appointment</Text>
+              <Text variant="label">{t('vigilanceHome.nextAppointment')}</Text>
               <Text variant="body" className="mt-1">
                 {new Date(
                   (appointments.data ?? []).filter(isUpcoming).at(-1)!.scheduledAt,
@@ -363,12 +363,12 @@ export function VigilanceHomeScreen() {
             ))}
             {(milestones.data ?? []).length === 0 ? (
               <Text variant="body">
-                Maintenance milestones unlock at 6 and 12 months of holding your loss.
+                {t('vigilanceHome.milestonesLocked')}
               </Text>
             ) : null}
           </Row>
 
-          <SectionTitle title="Know the warning signs" />
+          <SectionTitle title={t('vigilanceHome.warningSigns')} />
           <Card
             onPress={() =>
               navigation.navigate('EducationTopic', { topicId: 'side-effects' })
@@ -378,7 +378,7 @@ export function VigilanceHomeScreen() {
               <Row className="flex-1">
                 <Icon name="warning" size={18} color={theme.warning} />
                 <Text variant="subheading" className="ml-2 flex-1">
-                  Adverse events to watch for
+                  {t('vigilanceHome.adverseEvents')}
                 </Text>
               </Row>
               <Icon name="chevron" size={18} color={theme.textMuted} />
@@ -397,7 +397,7 @@ export function VigilanceHomeScreen() {
               <Row className="flex-1">
                 <Icon name="shield" size={18} color={theme.primary} />
                 <Text variant="subheading" className="ml-2 flex-1">
-                  Building a maintenance plan that holds
+                  {t('vigilanceHome.maintenancePlan')}
                 </Text>
               </Row>
               <Icon name="chevron" size={18} color={theme.textMuted} />
@@ -406,7 +406,7 @@ export function VigilanceHomeScreen() {
 
           <Button
             className="mt-6"
-            label="Talk to my coach"
+            label={t('vigilanceHome.talkToCoach')}
             variant="secondary"
             fullWidth
             onPress={() => navigation.navigate('Chat')}
