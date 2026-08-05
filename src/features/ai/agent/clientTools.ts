@@ -1,4 +1,5 @@
 import { evaluateEligibility } from '@core/clinical/eligibility';
+import { violatesPrescribingRule } from '@core/clinical/prescribingGuard';
 import type {
   AgentAction,
   AgentCard,
@@ -53,6 +54,45 @@ const num = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+
+/**
+ * A number the model supplied, accepted only inside a plausible range.
+ *
+ * These values are written to a health record and then read back by the
+ * wellness score, the relapse band and every percentage-lost calculation. A
+ * model that mis-parses "I was 95 kg back in 2019" should not be able to store
+ * -40 or 4000 kg. Postgres has CHECK constraints for the same ranges, but the
+ * on-device store — which is exactly the bring-your-own-key configuration this
+ * agent exists for — has none, so the check has to live here too.
+ *
+ * Out of range returns undefined, which every caller already treats as "not
+ * provided", so a bad value is dropped rather than clamped into a plausible
+ * lie.
+ */
+const inRange = (v: unknown, min: number, max: number): number | undefined => {
+  const n = num(v);
+  return n !== undefined && n >= min && n <= max ? n : undefined;
+};
+
+/** A 0-10 self-reported score. */
+const score = (v: unknown): number | undefined => inRange(v, 0, 10);
+
+/** Body weight in kilograms — the same bounds as the weight_entries CHECK. */
+const weight = (v: unknown): number | undefined => inRange(v, 10, 500);
+
+/** One of a fixed set, or undefined. `as` casts let anything through. */
+const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefined =>
+  typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : undefined;
+
+/*
+  These used to be `as` casts, which assert rather than check: "telepathy"
+  passed straight through to bookAppointment. Postgres enums reject them, but
+  the on-device store does not — and that is the configuration this agent runs
+  in.
+*/
+const SEXES = ['male', 'female', 'other', 'undisclosed'] as const satisfies readonly Sex[];
+const APPOINTMENT_MODES = ['in_person', 'video', 'phone'] as const;
+const REFILL_CHANNELS = ['hospital_pharmacy', 'nearby_pharmacy', 'home_delivery'] as const;
 
 export async function executeClientTool(
   name: string,
@@ -109,22 +149,28 @@ export async function executeClientTool(
 // ---------------------------------------------------------------------------
 
 async function checkEligibility(args: Args): Promise<ToolResult> {
+  const heightCm = inRange(args.height_cm, 50, 250);
+  const weightKg = weight(args.weight_kg);
+  const waistCm = inRange(args.waist_cm, 30, 250);
+
   const result = evaluateEligibility({
-    heightCm: num(args.height_cm) ?? null,
-    weightKg: num(args.weight_kg) ?? null,
-    waistCm: num(args.waist_cm) ?? null,
-    age: num(args.age) ?? null,
-    sex: (str(args.sex) as Sex) ?? 'undisclosed',
+    heightCm: heightCm ?? null,
+    weightKg: weightKg ?? null,
+    waistCm: waistCm ?? null,
+    age: inRange(args.age, 0, 120) ?? null,
+    sex: oneOf(args.sex, SEXES) ?? 'undisclosed',
     comorbidities: arr<Comorbidity>(args.comorbidities),
     contraindications: arr<Contraindication>(args.contraindications),
   });
 
-  // Anything the user volunteered mid-conversation is worth keeping.
-  if (num(args.height_cm) || num(args.weight_kg) || num(args.waist_cm)) {
+  // Anything the user volunteered mid-conversation is worth keeping. Note this
+  // overwrites startingWeightKg — the anchor every percentage-lost figure is
+  // measured from — so it only accepts a plausible body weight.
+  if (heightCm || weightKg || waistCm) {
     await saveProfile({
-      heightCm: num(args.height_cm) ?? undefined,
-      startingWeightKg: num(args.weight_kg) ?? undefined,
-      waistCm: num(args.waist_cm) ?? undefined,
+      heightCm: heightCm ?? undefined,
+      startingWeightKg: weightKg ?? undefined,
+      waistCm: waistCm ?? undefined,
     }).catch(() => undefined);
   }
 
@@ -184,7 +230,7 @@ async function book(args: Args): Promise<ToolResult> {
   const appointment = await bookAppointment({
     doctorId,
     scheduledAt,
-    mode: (str(args.mode) as 'in_person' | 'video' | 'phone') ?? 'in_person',
+    mode: oneOf(args.mode, APPOINTMENT_MODES) ?? 'in_person',
     reason: str(args.reason) ?? null,
   });
 
@@ -222,12 +268,19 @@ function getEducation(args: Args): ToolResult {
 }
 
 async function doLogWeight(args: Args): Promise<ToolResult> {
-  const weightKg = num(args.weight_kg);
-  if (!weightKg) return { forModel: { logged: false, error: 'weight_kg is required' } };
+  const weightKg = weight(args.weight_kg);
+  if (!weightKg) {
+    return {
+      forModel: {
+        logged: false,
+        error: 'weight_kg is required and must be a plausible body weight in kg (10-500)',
+      },
+    };
+  }
 
   const { milestones } = await logWeight({
     weightKg,
-    waistCm: num(args.waist_cm) ?? null,
+    waistCm: inRange(args.waist_cm, 30, 250) ?? null,
     recordedOn: str(args.recorded_on),
   });
 
@@ -248,18 +301,20 @@ function requestCheckIn(args: Args): ToolResult {
 async function doSaveCheckIn(args: Args, ctx: { stage: JourneyStage }): Promise<ToolResult> {
   const { wellness } = await saveCheckIn({
     kind: ctx.stage === 'vigilance' ? 'vigilance' : 'passive',
-    weightKg: num(args.weight_kg) ?? null,
-    moodScore: num(args.mood_score) ?? null,
-    appetiteScore: num(args.appetite_score) ?? null,
-    energyScore: num(args.energy_score) ?? null,
-    sleepHours: num(args.sleep_hours) ?? null,
-    sleepQuality: num(args.sleep_quality) ?? null,
-    stressScore: num(args.stress_score) ?? null,
-    cravingScore: num(args.craving_score) ?? null,
-    waterLitres: num(args.water_litres) ?? null,
-    exerciseMinutes: num(args.exercise_minutes) ?? null,
-    nutritionAdherence: num(args.nutrition_adherence) ?? null,
-    confidenceScore: num(args.confidence_score) ?? null,
+    // Every score feeds the wellness calculation and the relapse band, so an
+    // out-of-range value would quietly distort both. Dropped, not clamped.
+    weightKg: weight(args.weight_kg) ?? null,
+    moodScore: score(args.mood_score) ?? null,
+    appetiteScore: score(args.appetite_score) ?? null,
+    energyScore: score(args.energy_score) ?? null,
+    sleepHours: inRange(args.sleep_hours, 0, 24) ?? null,
+    sleepQuality: score(args.sleep_quality) ?? null,
+    stressScore: score(args.stress_score) ?? null,
+    cravingScore: score(args.craving_score) ?? null,
+    waterLitres: inRange(args.water_litres, 0, 20) ?? null,
+    exerciseMinutes: inRange(args.exercise_minutes, 0, 1440) ?? null,
+    nutritionAdherence: score(args.nutrition_adherence) ?? null,
+    confidenceScore: score(args.confidence_score) ?? null,
     sideEffects: arr<SideEffectReport>(args.side_effects),
     freeText: str(args.free_text) ?? null,
   });
@@ -295,11 +350,7 @@ async function medicationSchedule(): Promise<ToolResult> {
 
 async function doRequestRefill(args: Args): Promise<ToolResult> {
   const medicationId = str(args.medication_id);
-  const channel = str(args.channel) as
-    | 'hospital_pharmacy'
-    | 'nearby_pharmacy'
-    | 'home_delivery'
-    | undefined;
+  const channel = oneOf(args.channel, REFILL_CHANNELS);
 
   if (!medicationId || !channel) {
     // Let the model ask rather than guessing on the patient's behalf.
@@ -373,9 +424,24 @@ async function relapseProtocol(args: Args): Promise<ToolResult> {
 function escalate(args: Args): ToolResult {
   const severity = str(args.severity) === 'urgent' ? 'urgent' : 'routine';
   const message = str(args.message) ?? 'Please contact your doctor.';
+
+  /*
+    The prescribing guard used to inspect only the prose reply, so this string —
+    raw model output — reached the patient untouched, rendered as body text
+    under a red "Get medical help now" heading. That is the highest-authority
+    element in the whole UI. "Stop your 1 mg dose and drop back to 0.5 mg until
+    you see your doctor" would have been displayed exactly like that.
+
+    An escalation card must say "get help", never "change your dose", so a
+    violation is replaced outright rather than annotated.
+  */
+  const safeMessage = violatesPrescribingRule(message)
+    ? 'Please contact your doctor about this before changing anything.'
+    : message;
+
   return {
     forModel: { escalated: true, severity },
-    card: { kind: 'escalation', severity, message },
+    card: { kind: 'escalation', severity, message: safeMessage },
   };
 }
 
@@ -408,10 +474,15 @@ function isKnownIntent(value: unknown): value is AgentAction['intent'] {
 function suggestActions(args: Args): ToolResult {
   const raw = arr<{ label?: string; intent?: string }>(args.actions).slice(0, 3);
   const actions: AgentAction[] = raw
-    .filter((a) => Boolean(a.label) && isKnownIntent(a.intent))
+    // The label is model-authored text rendered on a button, so it goes through
+    // the prescribing guard too — "Increase to 1 mg" must not become a tappable
+    // suggestion just because the intent beside it is valid.
+    .filter(
+      (a) => Boolean(a.label) && isKnownIntent(a.intent) && !violatesPrescribingRule(a.label ?? ''),
+    )
     .map((a, i) => ({
       id: `${a.intent}-${i}`,
-      label: a.label as string,
+      label: (a.label as string).slice(0, 60),
       intent: a.intent as AgentAction['intent'],
     }));
 

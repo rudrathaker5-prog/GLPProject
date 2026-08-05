@@ -1,4 +1,8 @@
 import { calculateBmi, bmiCategoryIndian } from '@core/clinical/eligibility';
+import {
+  SAFE_REWRITE_SUFFIX,
+  violatesPrescribingRule,
+} from '@core/clinical/prescribingGuard';
 import { screenForSafety } from '@core/clinical/safety';
 import type { AgentCard, ChatMessage, JourneyStage, LanguageCode } from '@core/domain/types';
 import { listAppointments, isUpcoming } from '@features/appointments/api/appointmentsRepository';
@@ -70,10 +74,21 @@ export async function runOnDeviceAgent(params: {
     { role: 'user', content: message },
   ];
 
+  /*
+    An urgent red flag used to be handled by *asking* the model to lead with the
+    guidance. Nothing checked that it did. A model that opened with empathy, or
+    buried the advice halfway down a long Hindi reply, silently dropped it — and
+    unlike the offline engine, no escalation card was produced either. The
+    better-connected patient got the weaker handling.
+
+    So the guidance is now prepended deterministically and the card is pushed
+    unconditionally, exactly as localEngine does. The model is told the patient
+    has already seen it, so it adds to it instead of repeating it.
+  */
   if (safety.level === 'urgent' && safety.message) {
     messages.push({
       role: 'system',
-      content: `SAFETY OVERRIDE: this message matched a "${safety.category}" rule. Open your reply with this guidance, in your own words and in the user's language, before anything else: "${safety.message}"`,
+      content: `SAFETY: this message matched a "${safety.category}" rule. The patient has ALREADY been shown this guidance at the top of your reply: "${safety.message}". Do not repeat it. Continue from it — acknowledge what they described, and help with the rest of their message.`,
     });
   }
 
@@ -122,8 +137,13 @@ export async function runOnDeviceAgent(params: {
 
   // ---- 4. Post-model guard ------------------------------------------------
   if (violatesPrescribingRule(reply)) {
-    reply +=
-      '\n\nI cannot advise on dose changes — that decision belongs to your doctor, who can see your full history. Please raise it with them before changing anything.';
+    reply += SAFE_REWRITE_SUFFIX;
+  }
+
+  // ---- 5. Urgent guidance is not left to the model -------------------------
+  if (safety.level === 'urgent' && safety.message) {
+    reply = `${safety.message}\n\n${reply}`;
+    cards.unshift({ kind: 'escalation', severity: 'routine', message: safety.message });
   }
 
   return { reply, cards, toolsUsed };
@@ -195,12 +215,5 @@ async function buildContext(
   };
 }
 
-const PRESCRIPTION_PATTERNS = [
-  /\byou should (start|take|increase|decrease|stop) (taking )?\w+\s?\d*\s?(mg|mcg|units)\b/i,
-  /\bi (recommend|suggest) (you )?(start|increase|take) \w+ \d+\s?(mg|mcg)\b/i,
-  /\b(increase|raise|double) your dose to \d/i,
-];
+export { violatesPrescribingRule } from '@core/clinical/prescribingGuard';
 
-export function violatesPrescribingRule(text: string): boolean {
-  return PRESCRIPTION_PATTERNS.some((p) => p.test(text));
-}

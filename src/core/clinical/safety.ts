@@ -80,7 +80,7 @@ const RULES: Rule[] = [
     category: 'hypoglycaemia',
     level: 'urgent',
     patterns: [
-      /\b(sugar (went|dropped) (very )?low|hypo(glycaemi|glycemi)|shaky and sweating)\b/i,
+      /\b(sugar (went|dropped|drops|is|was|has gone) (very |really )?low|low blood sugar|hypo(glycaemi|glycemi)|shaky and sweating|sweating and shaky)\b/i,
       /(शुगर बहुत कम|हाइपो)/,
     ],
     message:
@@ -91,7 +91,11 @@ const RULES: Rule[] = [
     level: 'urgent',
     patterns: [
       /\b(pain (in |on )?(the )?(right|upper right).{0,25}(abdomen|stomach|side|rib))\b/i,
-      /\b(yellow(ing)? (of )?(eyes|skin)|jaundice)\b/i,
+      /\b(yellow(ing)? (of )?(my |the )?(eyes|skin)|jaundice)\b/i,
+      // How people actually say it: "the whites of my eyes have gone yellow",
+      // "my skin is turning yellow". The clinical phrasing above matches almost
+      // nobody's own words.
+      /\b(eyes|skin|whites of (my |the )?eyes)\b.{0,30}\b(gone|going|turned|turning|look(ing)?|are|is|have gone)\b.{0,10}\byellow/i,
     ],
     message:
       'Pain under the right ribs, especially after fatty food, or yellowing of the eyes needs a doctor promptly — rapid weight loss raises the chance of gallstones.',
@@ -133,7 +137,9 @@ const RULES: Rule[] = [
     category: 'medication_misuse',
     level: 'advice',
     patterns: [
-      /\b(double (the |my )?dose|took two doses|increase(d)? (my )?dose (myself|on my own)|skip(ping)? to a higher dose)\b/i,
+      // Past tense matters more than present here: people report what they have
+      // already done ("I doubled my dose"), not what they intend to do.
+      /\b(doubl(e|ed|ing) (the |my )?(weekly |daily )?dose|took two doses|took (an )?extra dose|increas(e|ed|ing) (my )?dose (myself|on my own)|skip(ping|ped)? to a higher dose|went up (a dose|to \d))\b/i,
       /(खुद डोज़ बढ़ा|दो डोज़ ले)/,
     ],
     message:
