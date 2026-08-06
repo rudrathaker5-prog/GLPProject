@@ -23,6 +23,7 @@ import { MissedDoseScreen } from '@features/medication/screens/MissedDoseScreen'
 import { RefillScreen } from '@features/medication/screens/RefillScreen';
 import { NotificationsScreen } from '@features/notifications/screens/NotificationsScreen';
 import { NutritionScreen } from '@features/nutrition/screens/NutritionScreen';
+import { NutritionStandardsScreen } from '@features/nutrition/screens/NutritionStandardsScreen';
 import { PeerGroupScreen } from '@features/peer/screens/PeerGroupScreen';
 import { PeerSupportScreen } from '@features/peer/screens/PeerSupportScreen';
 import { ProfileScreen } from '@features/profile/screens/ProfileScreen';
@@ -159,6 +160,11 @@ export function AppStack({
       <Stack.Screen name="Progress" component={ProgressScreen} options={{ title: t('screens.progress') }} />
       <Stack.Screen name="JourneyMap" component={JourneyScreen} options={{ title: t('screens.journeyMap') }} />
       <Stack.Screen name="Nutrition" component={NutritionScreen} options={{ title: t('screens.nutrition') }} />
+      <Stack.Screen
+        name="NutritionStandards"
+        component={NutritionStandardsScreen}
+        options={{ title: t('screens.nutritionStandards') }}
+      />
       <Stack.Screen
         name="DoctorNotes"
         component={DoctorNotesScreen}

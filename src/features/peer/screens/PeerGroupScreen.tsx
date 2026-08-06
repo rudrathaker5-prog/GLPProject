@@ -1,17 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRoute, type RouteProp } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import type { AllParamList } from '@/app/navigation/types';
 import {
   createPost,
-  generateAlias,
   joinGroup,
   listGroups,
   listPosts,
+  membershipFor,
   moderatePost,
 } from '@features/peer/api/peerRepository';
+import { useTranslation } from '@i18n/useTranslation';
 import {
   Badge,
   Button,
@@ -27,11 +28,20 @@ import {
 
 type Props = RouteProp<AllParamList, 'PeerGroup'>;
 
+/**
+ * Inside one group.
+ *
+ * Opening this screen used to join the group as a side effect of rendering it,
+ * which meant "read first" was impossible and an alias was assigned to people
+ * who had only looked. Reading is now free and joining is a button — which is
+ * also what makes the alias meaningful, because it is attached to a decision
+ * rather than to a page view.
+ */
 export function PeerGroupScreen() {
   const route = useRoute<Props>();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
-  const [alias, setAlias] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
 
   const groups = useQuery({ queryKey: ['peerGroups'], queryFn: listGroups });
@@ -39,30 +49,41 @@ export function PeerGroupScreen() {
     queryKey: ['peerPosts', route.params.groupId],
     queryFn: () => listPosts(route.params.groupId),
   });
+  const membership = useQuery({
+    queryKey: ['peerMembership', route.params.groupId],
+    queryFn: () => membershipFor(route.params.groupId),
+  });
 
   const group = groups.data?.groups.find((g) => g.id === route.params.groupId);
+  const alias = membership.data?.alias ?? null;
 
-  useEffect(() => {
-    void (async () => {
-      const joined = await joinGroup(route.params.groupId);
-      setAlias(joined || generateAlias());
-    })();
-  }, [route.params.groupId]);
+  const join = useMutation({
+    mutationFn: () => joinGroup(route.params.groupId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['peerMembership', route.params.groupId] });
+      void queryClient.invalidateQueries({ queryKey: ['peerMemberships'] });
+    },
+    onError: () => Alert.alert(t('peer.joinFailedTitle'), t('peer.joinFailedBody')),
+  });
 
   const post = useMutation({
-    mutationFn: () => createPost(route.params.groupId, draft.trim(), alias ?? generateAlias()),
+    // Guarded by `alias` below — the composer does not render without one.
+    mutationFn: () => createPost(route.params.groupId, draft.trim(), alias!),
     onSuccess: () => {
       setDraft('');
       void queryClient.invalidateQueries({ queryKey: ['peerPosts', route.params.groupId] });
     },
     onError: (error) =>
-      Alert.alert('Could not post', error instanceof Error ? error.message : 'Try again.'),
+      Alert.alert(
+        t('peer.postFailedTitle'),
+        error instanceof Error ? error.message : t('peer.postFailedBody'),
+      ),
   });
 
   const submit = () => {
     const check = moderatePost(draft.trim());
     if (!check.allowed) {
-      Alert.alert('Not posted', check.reason ?? 'That post breaks the group rules.');
+      Alert.alert(t('peer.notPostedTitle'), check.reason ?? t('peer.postBlocked'));
       return;
     }
     post.mutate();
@@ -70,34 +91,54 @@ export function PeerGroupScreen() {
 
   return (
     <Screen
-      title={group?.name ?? 'Group'}
+      title={group?.name ?? t('screens.group')}
       subtitle={group?.description}
       refreshing={posts.isRefetching}
       onRefresh={() => void posts.refetch()}
     >
       {alias ? (
         <View className="mb-4">
-          <Badge label={`You post as ${alias}`} tone="brand" />
+          <Badge label={t('peer.yourAlias', { alias })} tone="brand" />
         </View>
       ) : null}
 
-      <Card>
-        <Field label="Share something" hint="No dose advice, no numbers, no selling.">
-          <Input
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="What has this week been like?"
-            multiline
+      {alias ? (
+        <Card>
+          <Field label={t('peer.shareLabel')} hint={t('peer.shareHint')}>
+            <Input
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={t('peer.sharePlaceholder')}
+              multiline
+            />
+          </Field>
+          <Button
+            label={t('peer.post')}
+            fullWidth
+            disabled={draft.trim().length < 5}
+            loading={post.isPending}
+            onPress={submit}
           />
-        </Field>
-        <Button
-          label="Post"
-          fullWidth
-          disabled={draft.trim().length < 5}
-          loading={post.isPending}
-          onPress={submit}
-        />
-      </Card>
+        </Card>
+      ) : (
+        /*
+          Reading without joining is the point of this state, so it invites
+          rather than blocks — the posts below are already visible behind it.
+        */
+        <Card className="border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20">
+          <Text variant="subheading">{t('peer.readingTitle')}</Text>
+          <Text variant="body" className="mt-1">
+            {t('peer.readingBody')}
+          </Text>
+          <Button
+            className="mt-3"
+            label={t('peer.join')}
+            fullWidth
+            loading={join.isPending}
+            onPress={() => join.mutate()}
+          />
+        </Card>
+      )}
 
       {posts.isLoading ? <LoadingState /> : null}
 
@@ -117,15 +158,12 @@ export function PeerGroupScreen() {
         ))}
 
         {!posts.isLoading && (posts.data ?? []).length === 0 ? (
-          <EmptyState
-            title="No posts yet"
-            message="Be the first. Saying the hard part out loud is usually what helps someone else."
-          />
+          <EmptyState title={t('peer.noPostsTitle')} message={t('peer.noPostsBody')} />
         ) : null}
       </View>
 
       <Text variant="caption" className="mt-4 text-center">
-        Peer support is not medical advice. For anything clinical, ask your doctor or the care coach.
+        {t('peer.disclaimer')}
       </Text>
     </Screen>
   );

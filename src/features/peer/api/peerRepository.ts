@@ -1,4 +1,13 @@
-import { COLLECTIONS, findBy, newId, nowIso, upsert } from '@core/data/localDb';
+import {
+  COLLECTIONS,
+  findBy,
+  insert,
+  newId,
+  nowIso,
+  readCollection,
+  upsert,
+  writeCollection,
+} from '@core/data/localDb';
 import type { PeerGroup, PeerPost } from '@core/domain/types';
 import { supabase } from '@core/supabase/client';
 import type { PeerGroupRow, PeerPostRow } from '@core/supabase/database.types';
@@ -82,17 +91,85 @@ export async function listGroups(): Promise<{ groups: PeerGroup[]; offline: bool
   return { groups: FALLBACK_GROUPS, offline: true };
 }
 
+export interface PeerMembership {
+  id: string;
+  groupId: string;
+  userId: string | null;
+  alias: string;
+  joinedAt: string;
+}
+
+/**
+ * Joins a group, and remembers that you did.
+ *
+ * Membership used to be written only to Supabase, so with no backend the app
+ * had no idea which groups you were in — "Join" was a word next to a list. The
+ * alias in particular has to survive: posting under a different random name
+ * each session makes a support group useless, because nobody can follow anyone
+ * else's story.
+ *
+ * Local first, so an anonymous user with no network gets a stable identity in
+ * the group; the server copy follows when there is one.
+ */
 export async function joinGroup(groupId: string): Promise<string> {
+  const existing = await membershipFor(groupId);
+  if (existing) return existing.alias;
+
   const alias = generateAlias();
   const { userId, ensureIdentity } = useAuthStore.getState();
   const identity = userId ?? (await ensureIdentity());
 
+  /*
+    Deliberately not caught. The local row is the source of truth for
+    membership, so swallowing a failure here would show "Joined" over a group
+    the app forgets about by the next launch — the alias, and with it every
+    post the person makes, would silently change.
+  */
+  await insert<PeerMembership>(COLLECTIONS.peerMemberships, {
+    id: newId(),
+    groupId,
+    userId: identity ?? null,
+    alias,
+    joinedAt: nowIso(),
+  });
+
   if (identity && supabase) {
     await supabase
       .from('peer_memberships')
-      .upsert({ group_id: groupId, user_id: identity, alias }, { onConflict: 'group_id,user_id' });
+      .upsert({ group_id: groupId, user_id: identity, alias }, { onConflict: 'group_id,user_id' })
+      .then(() => undefined, () => undefined);
   }
   return alias;
+}
+
+/** Leaves a group. The alias is dropped with it — rejoining gets a new one. */
+export async function leaveGroup(groupId: string): Promise<void> {
+  const rows = await readCollection<PeerMembership>(COLLECTIONS.peerMemberships);
+  await writeCollection(
+    COLLECTIONS.peerMemberships,
+    rows.filter((row) => row.groupId !== groupId),
+  );
+
+  const { userId } = useAuthStore.getState();
+  if (userId && supabase) {
+    await supabase
+      .from('peer_memberships')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .then(() => undefined, () => undefined);
+  }
+}
+
+/** The membership for one group, if the user has joined it. */
+export async function membershipFor(groupId: string): Promise<PeerMembership | null> {
+  const rows = await readCollection<PeerMembership>(COLLECTIONS.peerMemberships).catch(() => []);
+  return rows.find((row) => row.groupId === groupId) ?? null;
+}
+
+/** Every group the user has joined. */
+export async function listMemberships(): Promise<PeerMembership[]> {
+  return readCollection<PeerMembership>(COLLECTIONS.peerMemberships).catch(() => []);
 }
 
 export async function listPosts(groupId: string): Promise<PeerPost[]> {

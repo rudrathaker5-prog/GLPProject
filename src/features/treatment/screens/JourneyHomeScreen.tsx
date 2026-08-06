@@ -10,6 +10,7 @@ import { listMedications } from '@features/medication/api/medicationRepository';
 import { getProfile } from '@features/profile/api/profileRepository';
 import { PRIMARY_DOCTORS } from '@features/doctors/api/fallbackDirectory';
 import { callNumber } from '@integrations/communication/communicationAdapter';
+import { SupportShortcuts } from '@features/support/components/SupportShortcuts';
 import { useTranslation } from '@i18n/useTranslation';
 import { Button, Card, IconButton, Row, SectionTitle, Text } from '@ui/components';
 import { Icon, type IconName } from '@ui/components/Icon';
@@ -148,6 +149,15 @@ function PreTreatment({ loading = false }: { loading?: boolean }) {
             cta={t('journeyHome.trackCta')}
             onPress={() => navigation.navigate('LogWeight')}
           />
+        </View>
+
+        {/*
+          Both of these work before treatment starts, and are two of the most
+          common questions at exactly this point: what will I have to eat, and
+          is anyone else doing this.
+        */}
+        <View className="px-5">
+          <SupportShortcuts />
         </View>
 
         {/* One-tap doctor calls */}

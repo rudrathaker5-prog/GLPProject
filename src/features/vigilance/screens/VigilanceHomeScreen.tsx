@@ -20,6 +20,7 @@ import {
   daysSinceLastCheckIn,
   progressSummary,
 } from '@features/tracking/api/trackingRepository';
+import { SupportShortcuts } from '@features/support/components/SupportShortcuts';
 import { WeightSparkline } from '@features/tracking/components/WeightSparkline';
 import { useTranslation } from '@i18n/useTranslation';
 import {
@@ -321,6 +322,14 @@ export function VigilanceHomeScreen() {
               />
             ) : null}
           </Card>
+
+          {/*
+            After treatment these two do most of the work the medicine used to
+            do — structure around food, and other people. Placed above the
+            doctor section because they are the everyday answer, and calling is
+            the escalation.
+          */}
+          <SupportShortcuts />
 
           {/* Doctor */}
           <SectionTitle title={t('vigilance.callDoctor')} />

@@ -117,5 +117,6 @@ export const COLLECTIONS = {
   peerPosts: 'peerPosts',
   deviceConnections: 'deviceConnections',
   callLog: 'callLog',
+  peerMemberships: 'peerMemberships',
   vigilanceCheckpoints: 'vigilanceCheckpoints',
 } as const;

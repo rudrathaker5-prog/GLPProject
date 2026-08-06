@@ -20,6 +20,7 @@ import {
 import { listMilestones } from '@features/journey/api/journeyRepository';
 import { daysSinceLastCheckIn, progressSummary } from '@features/tracking/api/trackingRepository';
 import { getProfile } from '@features/profile/api/profileRepository';
+import { SupportShortcuts } from '@features/support/components/SupportShortcuts';
 import { useTranslation } from '@i18n/useTranslation';
 import {
   Badge,
@@ -412,6 +413,13 @@ export function DashboardScreen() {
           <CallDoctorCard
             subtitle={t('dash.speakSubtitle')}
           />
+
+          {/*
+            Peer support used to be one tile among twelve below, and the
+            nutrition standard had no entry point at all. Both are pulled up
+            here because they are what people go looking for between doses.
+          */}
+          <SupportShortcuts />
 
           {/* Everything else */}
           <SectionTitle title={t('dash.yourCare')} />

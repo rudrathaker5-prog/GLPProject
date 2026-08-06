@@ -51,6 +51,7 @@ export type AppStackParamList = {
   Progress: undefined;
   JourneyMap: undefined;
   Nutrition: undefined;
+  NutritionStandards: undefined;
   DoctorNotes: undefined;
   DoctorNoteDetail: { noteId: string };
   PeerSupport: undefined;
