@@ -25,14 +25,28 @@ import { translate } from '@i18n/index';
  * a second device, and WhatsApp.
  */
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+/*
+  Module-scope native call, so it runs while the bundle is still being
+  evaluated — before React mounts and before `ErrorBoundary` can catch
+  anything. This module is imported by `AppProviders`, which means a failure
+  here does not disable reminders, it stops the app from starting at all.
+
+  The try/catch is not defensive clutter: it is the difference between "this
+  phone will not show notification banners" and "this phone cannot open the
+  app". Everything else in the service degrades on its own.
+*/
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch (error) {
+  console.warn('[notifications] handler could not be installed', error);
+}
 
 export const CHANNELS: {
   id: string;

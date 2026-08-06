@@ -17,6 +17,9 @@ import { ThemeProvider, useTheme } from '@ui/theme/ThemeProvider';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
+/** Longest the splash may stay up, however badly startup goes. */
+const SPLASH_WATCHDOG_MS = 8000;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -53,13 +56,32 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      await initialise();
-      await configureNotificationChannels();
+      /*
+        Each step is separately guarded, and none of them may keep the app on
+        the splash screen.
+
+        These three awaits used to be bare. A rejection in any one of them —
+        a notification channel the OS refused, a session read that threw —
+        skipped `setReady(true)`, so `SplashScreen.hideAsync()` never ran and
+        the app sat on the splash image indefinitely. There is no timeout on
+        that: to the person holding the phone it is indistinguishable from the
+        app failing to open, which is exactly how it was reported.
+
+        Notifications failing should cost you reminders, not the app.
+      */
+      await initialise().catch((error) =>
+        console.warn('[startup] session init failed, continuing anonymously', error),
+      );
+      await configureNotificationChannels().catch((error) =>
+        console.warn('[startup] notification channels unavailable', error),
+      );
       // Must run before any notification using these categories is scheduled,
       // or the action buttons simply do not render on it.
-      await configureNotificationActions();
+      await configureNotificationActions().catch((error) =>
+        console.warn('[startup] notification actions unavailable', error),
+      );
       // Push registration is best-effort; local reminders work without it.
-      void registerForPush();
+      void Promise.resolve(registerForPush()).catch(() => undefined);
       if (!cancelled) setReady(true);
     })();
 
@@ -82,6 +104,22 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync().catch(() => undefined);
   }, [ready]);
+
+  /*
+    Watchdog. `children` render whether or not `ready` is true, so a splash
+    that never hides is covering a working app — the worst possible failure,
+    because it looks identical to a crash and leaves nothing to report.
+
+    Nothing above should hang now that every startup step is caught, but the
+    guarantee worth making is "the splash always comes down", and a timer is
+    the only way to make it unconditionally.
+  */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void SplashScreen.hideAsync().catch(() => undefined);
+    }, SPLASH_WATCHDOG_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <SafeAreaProvider>

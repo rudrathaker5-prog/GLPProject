@@ -5,6 +5,8 @@ module.exports = {
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|nativewind|react-native-css-interop))',
   ],
   moduleNameMapper: {
+    // Metro compiles global.css through NativeWind; Jest has no such transform.
+    '\\.css$': '<rootDir>/jest/styleMock.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@core/(.*)$': '<rootDir>/src/core/$1',
     '^@features/(.*)$': '<rootDir>/src/features/$1',

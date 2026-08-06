@@ -207,9 +207,92 @@ Apple Developer account for a device build.
 **`Execution failed for task ':app:mergeReleaseResources'`** — stale build:
 `cd android && ./gradlew clean` then rebuild.
 
-**Build succeeds, app crashes on launch** — usually a Metro/native mismatch after
-adding a dependency. Re-run `npx expo prebuild --clean` and rebuild.
+**Build succeeds, app crashes on launch** — see the section below; this bit us
+for real and the cause was not the build.
 
 **Reminders do not fire on Xiaomi/Oppo/Vivo** — these ship aggressive battery
 managers. The user has to allow autostart and disable battery optimisation for
 the app; there is no programmatic way around it on those OEM skins.
+
+---
+
+## The app installs but will not open
+
+The icon appears, you tap it, the splash flashes and you are back on the home
+screen. Nothing is shown, and nothing obviously failed.
+
+### What causes it
+
+Almost always a **throw during module evaluation**. When the bundle is loaded,
+every module in the import graph is evaluated top to bottom before React mounts
+anything. A module that calls into a native module at that point — not inside a
+function, but at the top level of the file — will throw if that native module is
+missing or if its JavaScript and native halves are version-mismatched.
+
+That throw happens before React exists, so `ErrorBoundary` cannot catch it and
+there is no screen to render an error onto. The process simply dies.
+
+Two real instances in this app:
+
+- `expo-audio` patches `AudioModule.AudioPlayer.prototype` while its module is
+  evaluated. The chat screen imported it, the first tab imported the chat
+  screen, so a version-mismatched `expo-audio` took the entire app down at
+  launch. It is now loaded through a guarded `require` in `VoiceInputButton`,
+  so a failure costs the microphone button and nothing else.
+- `Linking.createURL('/')` was called at module scope in `RootNavigator` to
+  build the deep-link prefixes. It *throws* when it cannot read the
+  expo-constants manifest. The prefixes are now resolved on first render, with
+  a fallback to the declared `glpcare://` scheme.
+
+`npm test` now guards both: `src/app/__tests__/moduleEval.test.ts` imports every
+file in `src/` and fails if any of them throws, and `mount.test.tsx` renders the
+real root. Neither existed when this shipped, which is why it reached a phone.
+
+### Getting the actual reason off the phone
+
+The app no longer fails silently — `index.js` catches a module-evaluation throw
+and renders `StartupFailure`, which prints the message and stack on a dark
+screen. **A photo of that screen is usually the whole diagnosis.**
+
+If it dies before even that, capture the native log:
+
+```bash
+adb logcat -c                                  # clear
+# now launch the app on the phone, let it crash
+adb logcat -d > crash.txt                      # dump
+```
+
+Then look for the cause:
+
+```bash
+grep -iE "FATAL|AndroidRuntime|ReactNative|glpcare" crash.txt | head -50
+```
+
+No cable? On the phone: enable Developer options, turn on **Wireless debugging**,
+then `adb pair <host>:<port>` and `adb connect <host>:<port>` from a machine on
+the same Wi-Fi. Failing that, an app such as *Logcat Reader* (needs no root for
+its own process on many OEM builds) can export the log to a file you can send.
+
+### Ruling out the boring causes first
+
+```bash
+# 1. Does the installed APK match the source you think it does?
+adb shell dumpsys package in.glpcare.companion | grep -E "versionName|firstInstall"
+
+# 2. Did a previous install with a different signing key leave residue?
+adb uninstall in.glpcare.companion && adb install -r path/to/app-release.apk
+
+# 3. Are any packages off the SDK's expected versions?
+node -e "
+const b=require('./node_modules/expo/bundledNativeModules.json');
+const p=require('./package.json'), s=require('semver');
+for (const n of Object.keys(p.dependencies)) {
+  const w=b[n]; if(!w) continue;
+  const h=require('./node_modules/'+n+'/package.json').version;
+  if(!s.satisfies(h,w)) console.log('DRIFT', n, h, '!=', w);
+}"
+```
+
+That last one is worth running whenever anything is added. A minor-version drift
+in an Expo module means it was built for a different SDK, and the native half is
+what breaks — quietly, and only in a real build.

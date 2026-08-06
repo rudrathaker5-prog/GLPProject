@@ -9,7 +9,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { AuthScreen } from '@features/auth/screens/AuthScreen';
 import { OnboardingScreen } from '@features/auth/screens/OnboardingScreen';
@@ -33,12 +33,42 @@ const DoctorTabs = createBottomTabNavigator<DoctorTabParamList>();
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 /**
+ * The app's own scheme, declared in `app.config.ts` and in the manifest's
+ * intent filter. Deep linking works with this alone.
+ */
+const APP_SCHEME_PREFIX = 'glpcare://';
+
+/**
+ * Deep-link prefixes, resolved on demand rather than at import time.
+ *
+ * `Linking.createURL('/')` reads the expo-constants manifest and *throws* when
+ * it cannot — "expo-linking needs access to the expo-constants manifest". At
+ * module scope that throw happened while the bundle was still evaluating, so
+ * React never mounted and `ErrorBoundary` never existed: the app installed,
+ * showed its icon, and closed again the moment it was opened, with nothing on
+ * screen and nothing in the UI to explain it.
+ *
+ * The generated prefix only adds the development `exp://…` form. Losing it
+ * costs deep links in Expo Go and nothing in the installed app, which is a
+ * trade worth making unconditionally.
+ */
+function linkingPrefixes(): string[] {
+  try {
+    const generated = Linking.createURL('/');
+    return generated && generated !== APP_SCHEME_PREFIX
+      ? [generated, APP_SCHEME_PREFIX]
+      : [APP_SCHEME_PREFIX];
+  } catch (error) {
+    console.warn('[linking] falling back to the declared scheme only', error);
+    return [APP_SCHEME_PREFIX];
+  }
+}
+
+/**
  * Deep links resolve into the tab stack, so a medication reminder opens the
  * medication screen *inside* the My Journey tab rather than replacing the app.
  */
-const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [Linking.createURL('/'), 'glpcare://'],
-  config: {
+const linkingConfig: LinkingOptions<RootStackParamList>['config'] = {
     screens: {
       Main: {
         screens: {
@@ -79,7 +109,6 @@ const linking: LinkingOptions<RootStackParamList> = {
       Onboarding: 'start',
       Auth: 'account',
     },
-  },
 };
 
 function DoctorPortal() {
@@ -129,6 +158,12 @@ export function RootNavigator() {
   const { t } = useTranslation();
   const mode = useAuthStore((s) => s.mode);
   const initialised = useAuthStore((s) => s.initialised);
+
+  // Resolved on first render rather than at import — see `linkingPrefixes`.
+  const linking = useMemo<LinkingOptions<RootStackParamList>>(
+    () => ({ prefixes: linkingPrefixes(), config: linkingConfig }),
+    [],
+  );
 
   // Tapping a notification lands on the right tab and screen.
   useEffect(() => {
