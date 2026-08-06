@@ -60,7 +60,21 @@ export function translate(
 
 /** Best-effort mapping of the device locale onto a supported language. */
 export function detectDeviceLanguage(): LanguageCode {
-  const locales = Localization.getLocales();
+  /*
+    Runs from a startup effect. `getLocales` is a native call, and a throw
+    inside an effect tears the tree down — the person would get "Something
+    broke" instead of an app, because we could not read their phone's locale.
+    English is the fallback the function already returns for an unsupported
+    locale, so failing that way costs nothing beyond the auto-detection.
+  */
+  let locales: ReturnType<typeof Localization.getLocales>;
+  try {
+    locales = Localization.getLocales();
+  } catch (error) {
+    console.warn('[i18n] could not read the device locale', error);
+    return 'en';
+  }
+
   for (const locale of locales) {
     const code = locale.languageCode?.toLowerCase();
     if (code === 'hi' || code === 'gu' || code === 'mr' || code === 'en') {
