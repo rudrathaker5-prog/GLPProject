@@ -17,6 +17,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Input,
   Row,
   Screen,
@@ -50,11 +51,16 @@ export function CallHistoryScreen() {
 
       <SectionTitle title={t('calls.recent')} />
 
-      {calls.isLoading ? null : (calls.data ?? []).length === 0 ? (
-        <EmptyState
-          title={t('calls.emptyTitle')}
-          message={t('calls.emptyBody')}
-        />
+      {calls.isLoading ? null : calls.isError ? (
+        /*
+          An errored query has isLoading false and data undefined, so the empty
+          state used to render — presenting a storage failure as a positive
+          claim that the patient has rung nobody. For a log whose whole purpose
+          is negative evidence, a wrong statement is worse than a missing one.
+        */
+        <ErrorState message={t('calls.loadFailed')} onRetry={() => void calls.refetch()} />
+      ) : (calls.data ?? []).length === 0 ? (
+        <EmptyState title={t('calls.emptyTitle')} message={t('calls.emptyBody')} />
       ) : (
         (calls.data ?? []).map((call) => <CallRow key={call.id} call={call} />)
       )}

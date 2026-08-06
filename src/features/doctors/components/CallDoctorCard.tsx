@@ -73,7 +73,16 @@ export function CallDoctorCard({
               number={doctor.phone}
               contactName={doctor.fullName}
               kind="doctor"
-              reason={urgent ? 'red_flag' : reason}
+              /*
+                The caller's reason wins. `urgent` used to overwrite it with
+                'red_flag', which fired precisely when the specific reason was
+                most informative: the side-effect screen passes
+                urgent={flagged} reason="side_effect", the maintenance screen
+                passes urgent={crossed} reason="relapse". Overwriting both meant
+                lastCallFor('side_effect') could never find the call the app
+                itself prompted. Only an unspecified reason falls back.
+              */
+              reason={reason === 'routine' && urgent ? 'red_flag' : reason}
               label={t('callCard.call')}
               variant={urgent ? 'danger' : 'primary'}
             />

@@ -112,7 +112,12 @@ export async function runOnDeviceAgent(params: {
       const args = parseJsonLoose<Record<string, unknown>>(call.function.arguments) ?? {};
       toolsUsed.push(call.function.name);
 
-      const result = await executeClientTool(call.function.name, args, { stage });
+      // `message` is threaded through so call_doctor can check the user's own
+      // words before letting the dialler open by itself.
+      const result = await executeClientTool(call.function.name, args, {
+        stage,
+        userMessage: message,
+      });
       if (result.card) cards.push(result.card);
 
       messages.push({

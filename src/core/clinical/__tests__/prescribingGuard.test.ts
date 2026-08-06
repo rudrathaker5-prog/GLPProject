@@ -111,8 +111,17 @@ describe('client and server guards stay identical', () => {
   });
 
   it('ships the same disclaimer', () => {
-    const suffix = (source: string) =>
-      source.slice(source.indexOf('export const SAFE_REWRITE_SUFFIX')).trim();
+    /*
+      Bounded to the declaration itself rather than "to end of file". The server
+      module also carries the call-request gate mirror, appended after this, and
+      an unbounded slice made an unrelated addition look like a guard mismatch.
+    */
+    const suffix = (source: string) => {
+      const start = source.indexOf('export const SAFE_REWRITE_SUFFIX');
+      expect(start).toBeGreaterThan(-1);
+      const end = source.indexOf(';', start);
+      return source.slice(start, end + 1).trim();
+    };
     expect(suffix(serverSource)).toBe(suffix(clientSource));
   });
 });

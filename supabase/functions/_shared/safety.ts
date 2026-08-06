@@ -275,3 +275,53 @@ export function violatesPrescribingRule(text: string): boolean {
 
 export const SAFE_REWRITE_SUFFIX =
   '\n\nI cannot advise on dose changes — that decision belongs to your doctor, who can see your full history. Please raise it with them before changing anything.';
+
+/**
+ * MIRROR of the call-request gate in src/features/calls/api/resolveDoctor.ts,
+ * held byte-identical by src/features/calls/api/__tests__/callGateParity.test.ts.
+ *
+ * It decides whether the assistant may open the user's dialler unprompted, so
+ * the server must apply exactly the rule the device applies — otherwise the
+ * better-connected patient gets the looser one.
+ */
+/**
+ * Whether the user asked to be put through, as opposed to talking *about*
+ * ringing someone.
+ *
+ * Deliberately narrow. The cost of a false positive is the dialler opening
+ * unasked, which is intrusive and erodes trust in every other suggestion the
+ * app makes; the cost of a false negative is a tappable Call button, which is
+ * what the app did before and is perfectly fine. So this only fires on an
+ * imperative, and never on a question ("should I call my doctor?") or a report
+ * ("I called my doctor yesterday").
+ *
+ * Phone keyboards autocorrect a straight apostrophe to a curly one, so the
+ * patterns accept both. Matching only ' means "don't call" reads as a request
+ * to call, which is the worst possible way to get this wrong — and it is what
+ * the first version did.
+ */
+const APOS = "['\u2019]";
+
+const CALL_REQUEST_PATTERNS: RegExp[] = [
+  /^\s*(please\s+)?(call|phone|dial|ring)\b(?!.*\?)/i,
+  /\b(call|phone|ring|dial)\s+(my\s+|the\s+)?(doctor|dr\.?|physician|clinic)\b(?!.*\?)/i,
+  /\b(put me through|connect me)\b/i,
+  /(डॉक्टर को (कॉल|फ़ोन) करो|कॉल लगाओ|फ़ोन लगाओ)/,
+  /(ડૉક્ટરને (કૉલ|ફોન) કરો|કૉલ લગાવો)/,
+  /(डॉक्टरांना (कॉल|फोन) करा|कॉल लावा)/,
+];
+
+/** Phrases that look like a request but are not one. */
+const NOT_A_REQUEST: RegExp[] = [
+  /\b(should|shall|do you think|is it worth|when should|do i need)\b/i,
+  /\b(called|phoned|rang|dialled|dialed)\b/i,
+  new RegExp(
+    `\\b(cannot|can${APOS}?t|could not|couldn${APOS}?t|do not want to|don${APOS}?t want to)\\s+(call|phone|ring)\\b`,
+    'i',
+  ),
+];
+
+export function isDirectCallRequest(text: string): boolean {
+  if (NOT_A_REQUEST.some((pattern) => pattern.test(text))) return false;
+  return CALL_REQUEST_PATTERNS.some((pattern) => pattern.test(text));
+}

@@ -22,7 +22,7 @@ import {
   requestRefill,
 } from '@features/medication/api/medicationRepository';
 import { listCallLog, type CallReason } from '@features/calls/api/callService';
-import { resolveDoctorToCall } from '@features/calls/api/resolveDoctor';
+import { isDirectCallRequest, resolveDoctorToCall } from '@features/calls/api/resolveDoctor';
 import { getActivePlan } from '@features/nutrition/api/nutritionRepository';
 import {
   maintenanceStatus,
@@ -111,10 +111,22 @@ const CALL_REASONS = [
   'unknown',
 ] as const satisfies readonly CallReason[];
 
+export interface ToolContext {
+  stage: JourneyStage;
+  /**
+   * What the user actually typed this turn.
+   *
+   * Needed by `call_doctor`: the deterministic gate that decides whether the
+   * dialler may open by itself has to run against the user's own words, not
+   * against the model's judgement about them.
+   */
+  userMessage?: string;
+}
+
 export async function executeClientTool(
   name: string,
   args: Args,
-  ctx: { stage: JourneyStage },
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   try {
     switch (name) {
@@ -154,7 +166,7 @@ export async function executeClientTool(
       case 'trigger_relapse_protocol':
         return await relapseProtocol(args);
       case 'call_doctor':
-        return await doCallDoctor(args);
+        return await doCallDoctor(args, ctx);
       case 'escalate_to_care':
         return escalate(args);
       case 'suggest_actions':
@@ -505,7 +517,7 @@ async function maintenance(): Promise<ToolResult> {
  * direct call from here is so the same behaviour works when the server agent
  * answers: the server cannot dial anything, but it can return this card.
  */
-async function doCallDoctor(args: Args): Promise<ToolResult> {
+async function doCallDoctor(args: Args, ctx: ToolContext): Promise<ToolResult> {
   const resolved = await resolveDoctorToCall({
     doctorId: str(args.doctor_id) ?? null,
     doctorName: str(args.doctor_name) ?? null,
@@ -522,11 +534,24 @@ async function doCallDoctor(args: Args): Promise<ToolResult> {
 
   const reason = oneOf(args.reason, CALL_REASONS) ?? 'routine';
 
-  // Default to true: the tool exists to connect people, and a model that calls
-  // it having been told to only do so on an explicit request has already made
-  // the judgement. `false` is available for "here is the number, ring when
-  // you're ready".
-  const autoDial = args.auto_dial !== false;
+  /*
+    The dialler only opens by itself when BOTH the model chose to and the user's
+    own words were an instruction.
+
+    The tool description tells the model to call this only on an explicit
+    request, but a description is a request, not a constraint — a model asked
+    "should I call my doctor about this nausea?" can reasonably decide the
+    answer is yes and reach for the tool. That is precisely the false positive
+    this feature is supposed to avoid: the dialler opening because someone
+    *mentioned* calling.
+
+    So the deterministic gate runs here too, against the raw message. Without a
+    message to check (a tool replayed outside a turn) it does not auto-dial.
+    Failing closed costs one tap; failing open hijacks the screen.
+  */
+  const modelWantsDial = args.auto_dial !== false;
+  const userAskedOutright = ctx.userMessage ? isDirectCallRequest(ctx.userMessage) : false;
+  const autoDial = modelWantsDial && userAskedOutright;
 
   return {
     forModel: {
@@ -534,8 +559,9 @@ async function doCallDoctor(args: Args): Promise<ToolResult> {
       doctor: resolved.name,
       number: resolved.number,
       how_resolved: resolved.confidence,
-      note:
-        resolved.confidence === 'fallback'
+      note: !autoDial
+        ? 'Showing the number without opening the dialler, because the user did not ask outright. Tell them to tap Call when ready.'
+        : resolved.confidence === 'fallback'
           ? 'This is the general consulting line, not a doctor the user named. Say so.'
           : 'The dialler is opening with this number. Do not repeat the number as plain text.',
     },

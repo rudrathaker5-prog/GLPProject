@@ -219,6 +219,7 @@ export const en = {
   },
 
   calls: {
+    loadFailed: 'Could not load your call history. Your calls are safe — this is a read problem.',
     title: 'Calls',
     recent: 'Recent calls',
     callAgain: 'Call again',

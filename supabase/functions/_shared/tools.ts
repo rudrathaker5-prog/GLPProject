@@ -2,6 +2,7 @@ import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 import type { LlmToolDefinition } from './llm.ts';
 import type { Stage } from './prompts.ts';
+import { isDirectCallRequest } from './safety.ts';
 
 /**
  * The agent's action space.
@@ -18,6 +19,13 @@ export interface ToolContext {
   conversationId: string | null;
   stage: Stage;
   language: string;
+  /**
+   * What the user actually typed this turn.
+   *
+   * Needed by `call_doctor`: whether the dialler may open by itself is decided
+   * against the user's own words, not against the model's reading of them.
+   */
+  userMessage?: string;
 }
 
 export interface ToolResult {
@@ -1294,7 +1302,18 @@ const callDoctor: Tool = {
     }
 
     const reason = typeof args.reason === 'string' ? args.reason : 'routine';
-    const autoDial = args.auto_dial !== false;
+
+    /*
+      The dialler only opens by itself when BOTH the model chose to and the
+      user's own words were an instruction — the same rule as the device.
+
+      The tool description tells the model to call this only on an explicit
+      request, but a description is a request, not a constraint. A model asked
+      "should I call my doctor about this nausea?" can reasonably decide the
+      answer is yes and reach for the tool, which is exactly the false positive
+      the feature exists to avoid. Failing closed costs one tap.
+    */
+    const autoDial = args.auto_dial !== false && isDirectCallRequest(ctx.userMessage ?? '');
 
     return {
       forModel: {
@@ -1302,8 +1321,9 @@ const callDoctor: Tool = {
         doctor: doctor.full_name,
         number: doctor.phone,
         how_resolved: confidence,
-        note:
-          confidence === 'fallback'
+        note: !autoDial
+          ? 'Showing the number without opening the dialler, because the user did not ask outright. Tell them to tap Call when ready.'
+          : confidence === 'fallback'
             ? 'This is the general consulting line, not a doctor the user named. Say so.'
             : 'The dialler is opening with this number. Do not repeat the number as plain text.',
       },

@@ -1,7 +1,11 @@
 import { COLLECTIONS, newId, nowIso, readCollection, upsert } from '@core/data/localDb';
 import type { SideEffectCode } from '@core/domain/types';
 import { currentOwnerId } from '@features/auth/store/authStore';
-import { listCheckIns, progressSummary } from '@features/tracking/api/trackingRepository';
+import {
+  latestWeight,
+  listCheckIns,
+  listWeights,
+} from '@features/tracking/api/trackingRepository';
 
 /**
  * The maintenance phase, as data rather than as a screen.
@@ -108,10 +112,12 @@ export async function completeCheckpoint(input: {
   weightKg?: number | null;
   note?: string | null;
 }): Promise<VigilanceCheckpoint> {
-  const progress = await progressSummary().catch(() => null);
+  const [current, nadir] = await Promise.all([
+    latestWeight().catch(() => null),
+    lifetimeNadirKg(),
+  ]);
 
-  const weightKg = input.weightKg ?? progress?.currentWeightKg ?? null;
-  const nadir = progress?.nadirKg ?? null;
+  const weightKg = input.weightKg ?? current?.weightKg ?? null;
 
   const driftPercent =
     weightKg && nadir && nadir > 0
@@ -140,6 +146,25 @@ export async function completeCheckpoint(input: {
   return record;
 }
 
+/**
+ * The lowest weight ever recorded, not the lowest of the last year.
+ *
+ * `progressSummary().nadirKg` looks at `listWeights(365)`, which is right for a
+ * progress chart and wrong here. Maintenance drift is measured from the floor a
+ * patient actually reached, and at the 12-month checkpoint — the exact moment
+ * this feature exists for — the real nadir has aged out of a 365-day window.
+ *
+ * Concretely: treatment ends at 72 kg, a year later the lowest reading still in
+ * the window is 76 kg and the patient is 78 kg. Against the 365-day nadir that
+ * is 2.6% and "holding". Against the real one it is 8.3%, well past the action
+ * threshold, and the relapse protocol should have been offered months ago.
+ */
+async function lifetimeNadirKg(): Promise<number | null> {
+  const entries = await listWeights(3650).catch(() => []);
+  if (entries.length === 0) return null;
+  return Math.min(...entries.map((entry) => entry.weightKg));
+}
+
 export interface MaintenanceStatus {
   /** Current weight as a percentage above the lowest ever recorded. */
   driftPercent: number | null;
@@ -166,10 +191,12 @@ export interface MaintenanceStatus {
 export async function maintenanceStatus(
   treatmentCompletedAt: string | null,
 ): Promise<MaintenanceStatus> {
-  const progress = await progressSummary().catch(() => null);
+  const [nadirKg, current] = await Promise.all([
+    lifetimeNadirKg(),
+    latestWeight().catch(() => null),
+  ]);
 
-  const nadirKg = progress?.nadirKg ?? null;
-  const currentWeightKg = progress?.currentWeightKg ?? null;
+  const currentWeightKg = current?.weightKg ?? null;
 
   const actionWeightKg = nadirKg
     ? Math.round(nadirKg * (1 + ACTION_THRESHOLD_PERCENT / 100) * 10) / 10

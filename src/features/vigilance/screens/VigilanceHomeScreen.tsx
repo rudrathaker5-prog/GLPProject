@@ -77,7 +77,17 @@ export function VigilanceHomeScreen() {
   const riskBand = risk.data?.band ?? 'low';
   const riskTone = riskBand === 'high' ? 'danger' : riskBand === 'moderate' ? 'warning' : 'success';
 
-  const nextCheckpoint = [3, 6, 12].find((m) => (monthsSince ?? 0) < m);
+  /*
+    Only a real completion date produces checkpoints.
+
+    `(monthsSince ?? 0) < m` yielded 3 even when the date was unset, so the
+    "Remind me at 3, 6 and 12 months" button appeared and armed reminders
+    counted from today — while the Checkpoints screen told the same patient they
+    had no completion date and listed nothing. Two screens, two different
+    answers about whether a schedule exists.
+  */
+  const nextCheckpoint =
+    monthsSince === null ? undefined : [3, 6, 12].find((m) => monthsSince < m);
 
   /*
     The 3/6/12-month follow-ups used to be armed in exactly one place: choosing

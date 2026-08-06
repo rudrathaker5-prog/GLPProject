@@ -223,6 +223,7 @@ export const gu: DeepPartial<TranslationShape> = {
   },
 
   calls: {
+    loadFailed: 'તમારો કૉલ ઇતિહાસ લોડ થઈ શક્યો નહીં. તમારા કૉલ સુરક્ષિત છે — આ વાંચવાની સમસ્યા છે.',
     title: 'કૉલ',
     recent: 'તાજેતરના કૉલ',
     callAgain: 'ફરી કૉલ કરો',

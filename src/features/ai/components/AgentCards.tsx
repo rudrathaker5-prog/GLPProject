@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
@@ -403,11 +403,20 @@ function CallCard({
 }) {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const dialled = useRef(false);
+  const attempted = useRef(false);
+  /*
+    State, not just the ref: the label describes whether this card *dialled*,
+    which is permanent, while `shouldAutoDial` describes whether it *may* dial,
+    which expires after a minute. Reading the window for the label meant a card
+    that had genuinely placed a call flipped to "Call when you are ready" once
+    the user sent another message — telling them the call never happened.
+  */
+  const [hasDialled, setHasDialled] = useState(false);
 
   useEffect(() => {
-    if (dialled.current || !shouldAutoDial(card)) return;
-    dialled.current = true;
+    if (attempted.current || !shouldAutoDial(card)) return;
+    attempted.current = true;
+    setHasDialled(true);
     void placeCall({
       number: card.number,
       contactName: card.contactName,
@@ -421,7 +430,7 @@ function CallCard({
       <Row className="mb-1">
         <Icon name="phone" size={20} color={theme.primary} />
         <Text variant="subheading" className="ml-2 flex-1">
-          {shouldAutoDial(card) ? t('cards.callingNow') : t('cards.callWhenReady')}
+          {hasDialled ? t('cards.callingNow') : t('cards.callWhenReady')}
         </Text>
       </Row>
 
@@ -432,7 +441,7 @@ function CallCard({
         {card.number}
       </Text>
 
-      {shouldAutoDial(card) ? (
+      {hasDialled ? (
         <Text variant="caption" className="mt-2">
           {t('cards.dialerNote')}
         </Text>
@@ -444,7 +453,7 @@ function CallCard({
           contactName={card.contactName}
           kind="doctor"
           reason={card.reason}
-          label={shouldAutoDial(card) ? t('cards.callAgain') : t('cards.call')}
+          label={hasDialled ? t('cards.callAgain') : t('cards.call')}
           fullWidth
         />
       </View>

@@ -18,7 +18,7 @@ import { NOTIFICATION_ACTIONS, SNOOZE_MINUTES } from '../notificationService';
 
 jest.mock('@features/medication/api/medicationRepository', () => ({
   setDoseStatus: jest.fn(async () => undefined),
-  todaysDoses: jest.fn(async () => []),
+  listDoseEvents: jest.fn(async () => []),
 }));
 
 // expo-notifications exports getters, so its properties cannot be redefined by
@@ -29,15 +29,23 @@ jest.mock('expo-notifications', () => ({
   setNotificationCategoryAsync: jest.fn(async () => undefined),
 }));
 
-import { setDoseStatus, todaysDoses } from '@features/medication/api/medicationRepository';
+import { listDoseEvents, setDoseStatus } from '@features/medication/api/medicationRepository';
 
 const scheduleSpy = Notifications.scheduleNotificationAsync as jest.Mock;
 
+/** When the reminder was delivered by the OS. */
+const FIRED_AT = new Date('2026-08-06T09:00:00.000Z').getTime();
+
 /** Builds the response shape expo hands the listener. */
-function response(action: string, data: Record<string, unknown> = {}) {
+function response(
+  action: string,
+  data: Record<string, unknown> = {},
+  firedAt: number = FIRED_AT,
+) {
   return {
     actionIdentifier: action,
     notification: {
+      date: firedAt,
       request: {
         content: { title: 'Time for your Ozempic', body: 'Tap to mark it', data },
       },
@@ -49,7 +57,7 @@ const dose = (over: Record<string, unknown> = {}) => ({
   id: 'dose-1',
   medicationId: 'med-1',
   status: 'scheduled',
-  scheduledFor: '2026-08-06T09:00:00.000Z',
+  scheduledFor: new Date(FIRED_AT).toISOString(),
   ...over,
 });
 
@@ -60,7 +68,7 @@ beforeEach(() => {
 
 describe('marking a dose taken from the shade', () => {
   it('marks the outstanding dose for that medication', async () => {
-    (todaysDoses as jest.Mock).mockResolvedValue([dose()]);
+    (listDoseEvents as jest.Mock).mockResolvedValue([dose()]);
 
     const outcome = await handleNotificationAction(
       response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' }),
@@ -70,19 +78,55 @@ describe('marking a dose taken from the shade', () => {
     expect(outcome).toEqual({ handled: true, action: 'taken', medicationId: 'med-1' });
   });
 
-  it('picks the earliest outstanding dose when there are several', async () => {
-    (todaysDoses as jest.Mock).mockResolvedValue([
+  it('picks the dose closest to when the reminder fired', async () => {
+    (listDoseEvents as jest.Mock).mockResolvedValue([
       dose({ id: 'evening', scheduledFor: '2026-08-06T21:00:00.000Z' }),
       dose({ id: 'morning', scheduledFor: '2026-08-06T09:00:00.000Z' }),
     ]);
 
+    // The 09:00 reminder fired, so the 09:00 dose is the one meant.
     await handleNotificationAction(response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' }));
 
     expect(setDoseStatus).toHaveBeenCalledWith('morning', 'taken');
   });
 
+  it('marks the day the reminder fired, not the day the app was opened', async () => {
+    /*
+      The bug this replaced: with no background task the response is replayed
+      whenever the app is next opened, and resolving against "today" then marked
+      the wrong day. Tap Taken on Monday night, open the app Tuesday morning,
+      and Tuesday's dose was recorded while Monday's stayed scheduled — one tap,
+      two wrong numbers, in the figure a doctor reads.
+    */
+    (listDoseEvents as jest.Mock).mockResolvedValue([
+      dose({ id: 'monday', scheduledFor: '2026-08-06T21:00:00.000Z' }),
+      dose({ id: 'tuesday', scheduledFor: '2026-08-07T09:00:00.000Z' }),
+    ]);
+
+    const mondayEvening = new Date('2026-08-06T21:00:00.000Z').getTime();
+    await handleNotificationAction(
+      response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' }, mondayEvening),
+    );
+
+    expect(setDoseStatus).toHaveBeenCalledWith('monday', 'taken');
+  });
+
+  it('claims nothing when no dose is near the reminder', async () => {
+    // A stale reminder must not grab whatever dose happens to be outstanding.
+    (listDoseEvents as jest.Mock).mockResolvedValue([
+      dose({ id: 'much-later', scheduledFor: '2026-08-10T09:00:00.000Z' }),
+    ]);
+
+    const outcome = await handleNotificationAction(
+      response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' }),
+    );
+
+    expect(setDoseStatus).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ handled: false, reason: 'no-dose' });
+  });
+
   it('ignores doses already dealt with', async () => {
-    (todaysDoses as jest.Mock).mockResolvedValue([dose({ status: 'taken' })]);
+    (listDoseEvents as jest.Mock).mockResolvedValue([dose({ status: 'taken' })]);
 
     const outcome = await handleNotificationAction(
       response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' }),
@@ -93,7 +137,7 @@ describe('marking a dose taken from the shade', () => {
   });
 
   it('ignores doses for a different medication', async () => {
-    (todaysDoses as jest.Mock).mockResolvedValue([dose({ medicationId: 'med-other' })]);
+    (listDoseEvents as jest.Mock).mockResolvedValue([dose({ medicationId: 'med-other' })]);
 
     await handleNotificationAction(response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' }));
 
@@ -104,7 +148,7 @@ describe('marking a dose taken from the shade', () => {
 describe('snoozing', () => {
   it('never records the dose as taken', async () => {
     // The rule this whole file exists for.
-    (todaysDoses as jest.Mock).mockResolvedValue([dose()]);
+    (listDoseEvents as jest.Mock).mockResolvedValue([dose()]);
 
     await handleNotificationAction(response(NOTIFICATION_ACTIONS.snooze, { medicationId: 'med-1' }));
 
@@ -158,7 +202,7 @@ describe('everything else', () => {
   });
 
   it('survives the repository failing', async () => {
-    (todaysDoses as jest.Mock).mockRejectedValue(new Error('storage gone'));
+    (listDoseEvents as jest.Mock).mockRejectedValue(new Error('storage gone'));
 
     await expect(
       handleNotificationAction(response(NOTIFICATION_ACTIONS.taken, { medicationId: 'med-1' })),

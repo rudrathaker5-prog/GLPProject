@@ -223,6 +223,7 @@ export const mr: DeepPartial<TranslationShape> = {
   },
 
   calls: {
+    loadFailed: 'तुमचा कॉल इतिहास लोड होऊ शकला नाही. तुमचे कॉल सुरक्षित आहेत — ही वाचनाची अडचण आहे.',
     title: 'कॉल',
     recent: 'अलीकडील कॉल',
     callAgain: 'पुन्हा कॉल करा',

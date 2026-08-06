@@ -202,6 +202,10 @@ Deno.serve(async (req) => {
           conversationId,
           stage,
           language,
+          // call_doctor checks the user's own words before letting the dialler
+          // open by itself. Without this it would fall back to "no message" and
+          // never auto-dial, which is safe but useless.
+          userMessage: message,
         });
 
         if (result.card) cards.push(result.card);
