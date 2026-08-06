@@ -474,6 +474,17 @@ export type AgentCard =
       number: string;
       reason: CallCardReason;
       autoDial: boolean;
+      /**
+       * When the request was made, ISO.
+       *
+       * Auto-dial is a live action, not a stored state, and the chat store
+       * persists the last 60 messages *including their cards*. Without this the
+       * card rehydrates on the next launch with `autoDial` still true, mounts
+       * fresh, and opens the dialler — so someone who opened the app to check
+       * their weight would find it ringing a doctor. The card only dials if it
+       * was created seconds ago.
+       */
+      requestedAt: string;
     };
 
 /** Mirrors CallReason in the calls feature; duplicated here to keep domain types dependency-free. */

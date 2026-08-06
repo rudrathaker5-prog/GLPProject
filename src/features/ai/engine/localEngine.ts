@@ -112,6 +112,7 @@ export function runLocalEngine(input: LocalEngineInput): LocalEngineOutput {
       number: input.callTarget.number,
       reason: safety.level === 'urgent' ? 'red_flag' : 'routine',
       autoDial: true,
+      requestedAt: new Date().toISOString(),
     });
     return {
       reply:

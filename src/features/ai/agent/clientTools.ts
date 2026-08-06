@@ -545,6 +545,7 @@ async function doCallDoctor(args: Args): Promise<ToolResult> {
       number: resolved.number,
       reason,
       autoDial,
+      requestedAt: new Date().toISOString(),
     },
   };
 }

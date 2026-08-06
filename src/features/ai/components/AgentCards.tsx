@@ -366,11 +366,36 @@ function AgentCardView({ card }: { card: AgentCard }) {
  * friction. It is still the dialler, not a call: the green button is theirs to
  * press, and that is Android's consent step, not something to route around.
  *
- * The `useRef` guard matters more than it looks. This card lives in a chat
+ * Two guards, for two different failures.
+ *
+ * The `useRef` stops it re-dialling within a session: this card lives in a chat
  * transcript that re-renders on every new message, and without it, scrolling
- * back through the conversation would re-open the dialler each time. It fires
- * once per card, ever.
+ * back through the conversation would re-open the dialler each time.
+ *
+ * The freshness window stops something worse. The chat store persists the last
+ * 60 messages *including their cards*, so on the next launch this card
+ * rehydrates with `autoDial` still true and mounts fresh — a new component,
+ * with a new ref. Someone who opened the app to check their weight would find
+ * it dialling a doctor. Auto-dial is a live action, so it only happens if the
+ * request was made seconds ago.
  */
+
+/** How long after the request auto-dial is still the right thing to do. */
+const AUTO_DIAL_WINDOW_MS = 60_000;
+
+export function shouldAutoDial(
+  card: Extract<AgentCard, { kind: 'call' }>,
+  now = Date.now(),
+): boolean {
+  if (!card.autoDial) return false;
+  const requested = new Date(card.requestedAt).getTime();
+  // An unparseable date is treated as stale: never dial on a value we do not
+  // understand.
+  if (!Number.isFinite(requested)) return false;
+  const age = now - requested;
+  // Negative age means a clock change, not a fresh request.
+  return age >= 0 && age <= AUTO_DIAL_WINDOW_MS;
+}
 function CallCard({
   card,
 }: {
@@ -381,7 +406,7 @@ function CallCard({
   const dialled = useRef(false);
 
   useEffect(() => {
-    if (!card.autoDial || dialled.current) return;
+    if (dialled.current || !shouldAutoDial(card)) return;
     dialled.current = true;
     void placeCall({
       number: card.number,
@@ -396,7 +421,7 @@ function CallCard({
       <Row className="mb-1">
         <Icon name="phone" size={20} color={theme.primary} />
         <Text variant="subheading" className="ml-2 flex-1">
-          {card.autoDial ? t('cards.callingNow') : t('cards.callWhenReady')}
+          {shouldAutoDial(card) ? t('cards.callingNow') : t('cards.callWhenReady')}
         </Text>
       </Row>
 
@@ -407,7 +432,7 @@ function CallCard({
         {card.number}
       </Text>
 
-      {card.autoDial ? (
+      {shouldAutoDial(card) ? (
         <Text variant="caption" className="mt-2">
           {t('cards.dialerNote')}
         </Text>
@@ -419,7 +444,7 @@ function CallCard({
           contactName={card.contactName}
           kind="doctor"
           reason={card.reason}
-          label={card.autoDial ? t('cards.callAgain') : t('cards.call')}
+          label={shouldAutoDial(card) ? t('cards.callAgain') : t('cards.call')}
           fullWidth
         />
       </View>

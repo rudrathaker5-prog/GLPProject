@@ -1,4 +1,11 @@
-import { COLLECTIONS, insert, newId, nowIso, readCollection } from '@core/data/localDb';
+import {
+  COLLECTIONS,
+  insert,
+  newId,
+  nowIso,
+  readCollection,
+  writeCollection,
+} from '@core/data/localDb';
 import { CRISIS_RESOURCES_IN } from '@core/clinical/safety';
 import { supabase } from '@core/supabase/client';
 import { currentOwnerId } from '@features/auth/store/authStore';
@@ -171,7 +178,6 @@ export async function noteCallOutcome(callId: string, note: string): Promise<voi
   const index = rows.findIndex((row) => row.id === callId);
   if (index < 0) return;
   rows[index] = { ...rows[index], outcomeNote: note.trim() || null };
-  const { writeCollection } = await import('@core/data/localDb');
   await writeCollection(COLLECTIONS.callLog, rows);
 }
 

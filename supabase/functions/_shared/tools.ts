@@ -1313,6 +1313,7 @@ const callDoctor: Tool = {
         number: doctor.phone,
         reason,
         autoDial,
+        requestedAt: new Date().toISOString(),
       },
     };
   },
