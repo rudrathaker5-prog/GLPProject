@@ -196,6 +196,10 @@ export const gu: DeepPartial<TranslationShape> = {
   },
 
   cards: {
+    callingNow: 'હમણાં કૉલ કરી રહ્યા છીએ',
+    callWhenReady: 'તૈયાર હો ત્યારે કૉલ કરો',
+    dialerNote: 'તમારું ડાયલર આ નંબર સાથે ખૂલી રહ્યું છે. જોડાવા માટે કૉલ બટન દબાવો.',
+    callAgain: 'ફરી કૉલ કરો',
     eligibilityIndication: 'પાત્રતાનો સંકેત',
     nextStep: 'આગળનું પગલું',
     doctorsWhoHelp: 'મદદ કરી શકે તેવા ડૉક્ટર',

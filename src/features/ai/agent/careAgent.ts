@@ -8,6 +8,11 @@ import type {
 import { newId, nowIso } from '@core/data/localDb';
 import { AgentUnavailableError, callAgent, isAgentConfigured } from '@features/ai/api/agentGateway';
 import { hasApiKey } from '@features/ai/api/openAiClient';
+import {
+  extractDoctorName,
+  isDirectCallRequest,
+  resolveDoctorToCall,
+} from '@features/calls/api/resolveDoctor';
 import { runLocalEngine } from '@features/ai/engine/localEngine';
 import { runOnDeviceAgent } from '@features/ai/agent/onDeviceAgent';
 import { getProfile, saveProfile } from '@features/profile/api/profileRepository';
@@ -136,6 +141,18 @@ async function localTurn(
   profile: Awaited<ReturnType<typeof getProfile>> | null,
   reason: string,
 ): Promise<AgentTurnResult> {
+  /*
+    Resolve the call target before running the engine.
+
+    The engine is synchronous by design — it must answer with the network down
+    and nothing loaded — so the async directory lookup happens here. Only done
+    when the message actually looks like a request to be put through, so the
+    common path costs nothing.
+  */
+  const callTarget = isDirectCallRequest(input.message)
+    ? await resolveDoctorToCall({ doctorName: extractDoctorName(input.message) }).catch(() => null)
+    : null;
+
   const result = runLocalEngine({
     message: input.message,
     stage: input.stage,
@@ -153,6 +170,13 @@ async function localTurn(
       contraindications: profile?.contraindications,
       displayName: profile?.displayName,
     },
+    callTarget: callTarget
+      ? {
+          name: callTarget.name,
+          number: callTarget.number,
+          confidence: callTarget.confidence,
+        }
+      : null,
   });
 
   // Persist measurements the user mentioned in passing.

@@ -192,6 +192,10 @@ export const en = {
   },
 
   cards: {
+    callingNow: 'Calling now',
+    callWhenReady: 'Call when you are ready',
+    dialerNote: 'Your dialler is opening with this number. Press the call button to connect.',
+    callAgain: 'Call again',
     eligibilityIndication: 'Eligibility indication',
     nextStep: 'Next step',
     doctorsWhoHelp: 'Doctors who can help',

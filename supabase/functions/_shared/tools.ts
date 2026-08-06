@@ -1170,6 +1170,154 @@ const getMaintenanceStatus: Tool = {
   },
 };
 
+
+/**
+ * Puts the user through to a doctor.
+ *
+ * The server obviously cannot dial a phone. It does not need to: it returns the
+ * same `call` card the on-device tool returns, and the app opens the dialler
+ * when it renders. That is why this is a card rather than a direct call in the
+ * client tool — one behaviour, whichever engine answered.
+ *
+ * Resolution order matches resolveDoctorToCall() on the device: an explicit id,
+ * then a name, then the patient's own primary doctor, then the general
+ * consulting line.
+ */
+const callDoctor: Tool = {
+  stages: ['awareness', 'treatment', 'vigilance'],
+  requiresAuth: false,
+  definition: {
+    type: 'function',
+    function: {
+      name: 'call_doctor',
+      description:
+        'Put the user through to a doctor by opening their phone dialler with the number already filled in. Call this ONLY when the user has asked outright — "call my doctor", "phone Dr Mehta", "put me through". Do NOT call it when they are asking whether they should ring someone, or telling you they already did; offer the doctor list instead. With no arguments it resolves to their own doctor, or the general consulting line. The user still presses the call button themselves.',
+      parameters: {
+        type: 'object',
+        properties: {
+          doctor_id: {
+            type: 'string',
+            description: 'Id from a previous find_doctors result, if you have one.',
+          },
+          doctor_name: {
+            type: 'string',
+            description: 'The name the user said, if they named someone.',
+          },
+          reason: {
+            type: 'string',
+            enum: [
+              'routine',
+              'side_effect',
+              'missed_dose',
+              'refill',
+              'appointment',
+              'red_flag',
+              'relapse',
+            ],
+            description: 'Why they are ringing. Recorded with the call so the reason survives.',
+          },
+          auto_dial: {
+            type: 'boolean',
+            description:
+              'Defaults to true. Set false only to show the number without opening the dialler.',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  handler: async (args, ctx) => {
+    const doctorId = typeof args.doctor_id === 'string' ? args.doctor_id : null;
+    const doctorName = typeof args.doctor_name === 'string' ? args.doctor_name : null;
+
+    let doctor: { id: string; full_name: string; phone: string | null } | null = null;
+    let confidence: 'explicit' | 'named' | 'primary' | 'fallback' = 'fallback';
+
+    if (doctorId) {
+      const { data } = await ctx.supabase
+        .from('doctors')
+        .select('id, full_name, phone')
+        .eq('id', doctorId)
+        .maybeSingle();
+      if (data?.phone) {
+        doctor = data;
+        confidence = 'explicit';
+      }
+    }
+
+    if (!doctor && doctorName) {
+      const { data } = await ctx.supabase
+        .from('doctors')
+        .select('id, full_name, phone')
+        .ilike('full_name', `%${doctorName.replace(/[%_]/g, '')}%`)
+        .not('phone', 'is', null)
+        .limit(1);
+      if (data?.[0]?.phone) {
+        doctor = data[0];
+        confidence = 'named';
+      }
+    }
+
+    if (!doctor && ctx.userId) {
+      const { data: profile } = await ctx.supabase
+        .from('profiles')
+        .select('primary_doctor_id')
+        .eq('id', ctx.userId)
+        .maybeSingle();
+
+      if (profile?.primary_doctor_id) {
+        const { data } = await ctx.supabase
+          .from('doctors')
+          .select('id, full_name, phone')
+          .eq('id', profile.primary_doctor_id)
+          .maybeSingle();
+        if (data?.phone) {
+          doctor = data;
+          confidence = 'primary';
+        }
+      }
+    }
+
+    if (!doctor) {
+      const { data } = await ctx.supabase
+        .from('doctors')
+        .select('id, full_name, phone')
+        .not('phone', 'is', null)
+        .limit(1);
+      if (data?.[0]?.phone) doctor = data[0];
+    }
+
+    if (!doctor?.phone) {
+      return {
+        forModel: { called: false, error: 'No reachable number. Offer the doctor list instead.' },
+      };
+    }
+
+    const reason = typeof args.reason === 'string' ? args.reason : 'routine';
+    const autoDial = args.auto_dial !== false;
+
+    return {
+      forModel: {
+        called: autoDial,
+        doctor: doctor.full_name,
+        number: doctor.phone,
+        how_resolved: confidence,
+        note:
+          confidence === 'fallback'
+            ? 'This is the general consulting line, not a doctor the user named. Say so.'
+            : 'The dialler is opening with this number. Do not repeat the number as plain text.',
+      },
+      card: {
+        kind: 'call',
+        contactName: doctor.full_name,
+        number: doctor.phone,
+        reason,
+        autoDial,
+      },
+    };
+  },
+};
+
 export const TOOLS: Record<string, Tool> = {
   check_eligibility: checkEligibility,
   find_doctors: findDoctors,
@@ -1189,6 +1337,7 @@ export const TOOLS: Record<string, Tool> = {
   get_call_history: getCallHistory,
   get_maintenance_status: getMaintenanceStatus,
   trigger_relapse_protocol: triggerRelapseProtocol,
+  call_doctor: callDoctor,
   escalate_to_care: escalate,
   remember: rememberFact,
   suggest_actions: suggestActions,

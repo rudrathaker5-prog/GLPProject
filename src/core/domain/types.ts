@@ -455,7 +455,37 @@ export type AgentCard =
   | { kind: 'medication_schedule'; medications: MedicationItem[] }
   | { kind: 'nutrition_plan'; plan: NutritionPlan }
   | { kind: 'action'; actions: AgentAction[] }
-  | { kind: 'escalation'; severity: 'urgent' | 'routine'; message: string };
+  | { kind: 'escalation'; severity: 'urgent' | 'routine'; message: string }
+  /**
+   * A call the assistant is placing on the user's behalf.
+   *
+   * `autoDial` opens the OS dialler as soon as the card renders. That is not
+   * "the app makes a call": a `tel:` intent fills the number in and the person
+   * still presses the green button, which is Android's own consent step and is
+   * not bypassed. What it removes is the second tap, which matters when someone
+   * has just typed "call my doctor" and meant it.
+   *
+   * Only set when the user asked in so many words. A card that dials because
+   * the model *inferred* an intention is a card that hijacks the screen.
+   */
+  | {
+      kind: 'call';
+      contactName: string;
+      number: string;
+      reason: CallCardReason;
+      autoDial: boolean;
+    };
+
+/** Mirrors CallReason in the calls feature; duplicated here to keep domain types dependency-free. */
+export type CallCardReason =
+  | 'routine'
+  | 'side_effect'
+  | 'missed_dose'
+  | 'refill'
+  | 'appointment'
+  | 'red_flag'
+  | 'relapse'
+  | 'unknown';
 
 export interface AgentAction {
   id: string;

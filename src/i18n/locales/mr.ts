@@ -196,6 +196,10 @@ export const mr: DeepPartial<TranslationShape> = {
   },
 
   cards: {
+    callingNow: 'आत्ता कॉल करत आहोत',
+    callWhenReady: 'तयार असाल तेव्हा कॉल करा',
+    dialerNote: 'तुमचे डायलर या नंबरसह उघडत आहे. जोडण्यासाठी कॉल बटण दाबा.',
+    callAgain: 'पुन्हा कॉल करा',
     eligibilityIndication: 'पात्रतेचा संकेत',
     nextStep: 'पुढील पाऊल',
     doctorsWhoHelp: 'मदत करू शकणारे डॉक्टर',

@@ -21,7 +21,8 @@ import {
   refillDaysRemaining,
   requestRefill,
 } from '@features/medication/api/medicationRepository';
-import { listCallLog } from '@features/calls/api/callService';
+import { listCallLog, type CallReason } from '@features/calls/api/callService';
+import { resolveDoctorToCall } from '@features/calls/api/resolveDoctor';
 import { getActivePlan } from '@features/nutrition/api/nutritionRepository';
 import {
   maintenanceStatus,
@@ -99,6 +100,16 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
 const SEXES = ['male', 'female', 'other', 'undisclosed'] as const satisfies readonly Sex[];
 const APPOINTMENT_MODES = ['in_person', 'video', 'phone'] as const;
 const REFILL_CHANNELS = ['hospital_pharmacy', 'nearby_pharmacy', 'home_delivery'] as const;
+const CALL_REASONS = [
+  'routine',
+  'side_effect',
+  'missed_dose',
+  'refill',
+  'appointment',
+  'red_flag',
+  'relapse',
+  'unknown',
+] as const satisfies readonly CallReason[];
 
 export async function executeClientTool(
   name: string,
@@ -142,6 +153,8 @@ export async function executeClientTool(
         return await maintenance();
       case 'trigger_relapse_protocol':
         return await relapseProtocol(args);
+      case 'call_doctor':
+        return await doCallDoctor(args);
       case 'escalate_to_care':
         return escalate(args);
       case 'suggest_actions':
@@ -474,6 +487,64 @@ async function maintenance(): Promise<ToolResult> {
       threshold_crossed: status.thresholdCrossed,
       months_since_completion: status.monthsSinceCompletion,
       note: 'Drift is measured from their lowest weight, not their starting weight. If the threshold is crossed, point them at the relapse protocol — early and small beats late and large.',
+    },
+  };
+}
+
+/**
+ * Puts the user through to a doctor.
+ *
+ * This does not place a call from code. It returns a card that opens the OS
+ * dialler with the number filled in — the person still presses the green
+ * button, which is Android's own consent step and is not something to route
+ * around. What it removes is hunting for the number, which is the part that
+ * stops people ringing when they should.
+ *
+ * `autoDial` is only ever set when the user asked outright. The model is told
+ * that in the tool description, and the reason it is a *card* rather than a
+ * direct call from here is so the same behaviour works when the server agent
+ * answers: the server cannot dial anything, but it can return this card.
+ */
+async function doCallDoctor(args: Args): Promise<ToolResult> {
+  const resolved = await resolveDoctorToCall({
+    doctorId: str(args.doctor_id) ?? null,
+    doctorName: str(args.doctor_name) ?? null,
+  });
+
+  if (!resolved) {
+    return {
+      forModel: {
+        called: false,
+        error: 'No reachable number. Offer the doctor list instead.',
+      },
+    };
+  }
+
+  const reason = oneOf(args.reason, CALL_REASONS) ?? 'routine';
+
+  // Default to true: the tool exists to connect people, and a model that calls
+  // it having been told to only do so on an explicit request has already made
+  // the judgement. `false` is available for "here is the number, ring when
+  // you're ready".
+  const autoDial = args.auto_dial !== false;
+
+  return {
+    forModel: {
+      called: autoDial,
+      doctor: resolved.name,
+      number: resolved.number,
+      how_resolved: resolved.confidence,
+      note:
+        resolved.confidence === 'fallback'
+          ? 'This is the general consulting line, not a doctor the user named. Say so.'
+          : 'The dialler is opening with this number. Do not repeat the number as plain text.',
+    },
+    card: {
+      kind: 'call',
+      contactName: resolved.name,
+      number: resolved.number,
+      reason,
+      autoDial,
     },
   };
 }

@@ -337,6 +337,45 @@ const SPECS: ToolSpec[] = [
     definition: {
       type: 'function',
       function: {
+        name: 'call_doctor',
+        description:
+          'Put the user through to a doctor by opening their phone dialler with the number already filled in. Call this ONLY when the user has asked outright — "call my doctor", "phone Dr Mehta", "put me through". Do NOT call it when they are asking whether they should ring someone, or telling you they already did; offer the doctor list instead. With no arguments it resolves to their own doctor, or the general consulting line. The user still presses the call button themselves.',
+        parameters: obj({
+          doctor_id: {
+            type: 'string',
+            description: 'Id from a previous find_doctors result, if you have one.',
+          },
+          doctor_name: {
+            type: 'string',
+            description: 'The name the user said, if they named someone.',
+          },
+          reason: {
+            type: 'string',
+            enum: [
+              'routine',
+              'side_effect',
+              'missed_dose',
+              'refill',
+              'appointment',
+              'red_flag',
+              'relapse',
+            ],
+            description: 'Why they are ringing. Recorded with the call so the reason survives.',
+          },
+          auto_dial: {
+            type: 'boolean',
+            description:
+              'Defaults to true. Set false only to show the number without opening the dialler, for example when the user asked for it but said they will ring later.',
+          },
+        }),
+      },
+    },
+  },
+  {
+    stages: ['awareness', 'treatment', 'vigilance'],
+    definition: {
+      type: 'function',
+      function: {
         name: 'get_call_history',
         description:
           'Read calls the user has placed from inside the app — who, when and why. Call this before telling someone to ring their doctor, so you do not tell a person who called this morning to call. It records that the dialler was opened, not that anyone answered.',

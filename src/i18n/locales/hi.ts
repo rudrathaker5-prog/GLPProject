@@ -196,6 +196,10 @@ export const hi: DeepPartial<TranslationShape> = {
   },
 
   cards: {
+    callingNow: 'अभी कॉल कर रहे हैं',
+    callWhenReady: 'जब तैयार हों तब कॉल करें',
+    dialerNote: 'आपका डायलर इस नंबर के साथ खुल रहा है। जोड़ने के लिए कॉल बटन दबाएँ।',
+    callAgain: 'फिर कॉल करें',
     eligibilityIndication: 'पात्रता का संकेत',
     nextStep: 'अगला कदम',
     doctorsWhoHelp: 'डॉक्टर जो मदद कर सकते हैं',

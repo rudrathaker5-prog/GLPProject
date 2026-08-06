@@ -1,14 +1,18 @@
 import { useNavigation } from '@react-navigation/native';
+import { useEffect, useRef } from 'react';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
 import type { AllParamList } from '@/app/navigation/types';
 import type { AgentAction, AgentCard, Doctor } from '@core/domain/types';
 import { PRIMARY_DOCTORS } from '@features/doctors/api/fallbackDirectory';
+import { placeCall } from '@features/calls/api/callService';
+import { CallButton } from '@features/calls/components/CallButton';
 import { callNumber } from '@integrations/communication/communicationAdapter';
 import { useTranslation } from '@i18n/useTranslation';
 import { Badge, Button, Card, ProgressBar, Row, Text } from '@ui/components';
 import { Icon } from '@ui/components/Icon';
+import { useTheme } from '@ui/theme/ThemeProvider';
 
 type Nav = NativeStackNavigationProp<AllParamList>;
 
@@ -302,6 +306,9 @@ function AgentCardView({ card }: { card: AgentCard }) {
         </View>
       );
 
+    case 'call':
+      return <CallCard card={card} />;
+
     case 'escalation':
       return (
         <Card
@@ -349,6 +356,75 @@ function AgentCardView({ card }: { card: AgentCard }) {
     default:
       return null;
   }
+}
+
+/**
+ * A call the assistant is placing.
+ *
+ * When `autoDial` is set this opens the OS dialler as the card renders — the
+ * user asked to be put through, so making them tap a second button is just
+ * friction. It is still the dialler, not a call: the green button is theirs to
+ * press, and that is Android's consent step, not something to route around.
+ *
+ * The `useRef` guard matters more than it looks. This card lives in a chat
+ * transcript that re-renders on every new message, and without it, scrolling
+ * back through the conversation would re-open the dialler each time. It fires
+ * once per card, ever.
+ */
+function CallCard({
+  card,
+}: {
+  card: Extract<AgentCard, { kind: 'call' }>;
+}) {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const dialled = useRef(false);
+
+  useEffect(() => {
+    if (!card.autoDial || dialled.current) return;
+    dialled.current = true;
+    void placeCall({
+      number: card.number,
+      contactName: card.contactName,
+      kind: 'doctor',
+      reason: card.reason,
+    });
+  }, [card]);
+
+  return (
+    <Card className="border-brand-300 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20">
+      <Row className="mb-1">
+        <Icon name="phone" size={20} color={theme.primary} />
+        <Text variant="subheading" className="ml-2 flex-1">
+          {card.autoDial ? t('cards.callingNow') : t('cards.callWhenReady')}
+        </Text>
+      </Row>
+
+      <Text variant="bodyStrong" className="mt-1">
+        {card.contactName}
+      </Text>
+      <Text variant="caption" className="mt-0.5">
+        {card.number}
+      </Text>
+
+      {card.autoDial ? (
+        <Text variant="caption" className="mt-2">
+          {t('cards.dialerNote')}
+        </Text>
+      ) : null}
+
+      <View className="mt-3">
+        <CallButton
+          number={card.number}
+          contactName={card.contactName}
+          kind="doctor"
+          reason={card.reason}
+          label={card.autoDial ? t('cards.callAgain') : t('cards.call')}
+          fullWidth
+        />
+      </View>
+    </Card>
+  );
 }
 
 function ActionButton({ action }: { action: AgentAction }) {

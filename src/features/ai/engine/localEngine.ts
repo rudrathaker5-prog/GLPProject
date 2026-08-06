@@ -9,6 +9,8 @@ import type {
 import { EDUCATION_TOPICS, getTopic, searchTopics } from '@features/awareness/content/education';
 import { MYTHS, searchMyths } from '@features/awareness/content/myths';
 
+import { isDirectCallRequest } from '@features/calls/api/resolveDoctor';
+
 import { classifyIntent, extractMeasurements, type Intent } from './intents';
 import { pickVariant, responses, type ResponseKey } from './responses';
 
@@ -27,6 +29,14 @@ export interface LocalEngineInput {
   stage: JourneyStage;
   language: LanguageCode;
   history: { role: 'user' | 'assistant'; content: string }[];
+  /**
+   * Who to ring if the user asks to be put through.
+   *
+   * Resolved by the caller because the directory lookup is async and this
+   * engine is deliberately synchronous — it has to be able to answer with the
+   * network down and nothing loaded.
+   */
+  callTarget?: { name: string; number: string; confidence: string } | null;
   profile: {
     heightCm?: number | null;
     weightKg?: number | null;
@@ -81,6 +91,40 @@ export function runLocalEngine(input: LocalEngineInput): LocalEngineOutput {
   }
 
   const prefix = safety.level === 'urgent' ? `${safety.message}\n\n` : '';
+
+  /*
+    ---- "Call my doctor" ---------------------------------------------------
+
+    Handled before anything else that is not a red flag, and deterministically,
+    because this has to work with no API key, no network and no model. Someone
+    typing "call my doctor" is not asking for a conversation — they want a
+    phone to ring, and the offline engine is exactly the configuration where
+    they are least likely to have another way to get the number.
+
+    The card carries the number; the resolution happens in the caller, which
+    has async access to the directory. If it could not be resolved we fall
+    through to the normal flow rather than claiming to have called.
+  */
+  if (isDirectCallRequest(text) && input.callTarget) {
+    cards.push({
+      kind: 'call',
+      contactName: input.callTarget.name,
+      number: input.callTarget.number,
+      reason: safety.level === 'urgent' ? 'red_flag' : 'routine',
+      autoDial: true,
+    });
+    return {
+      reply:
+        prefix +
+        (input.callTarget.confidence === 'fallback'
+          ? `Opening your dialler for the consulting line — ${input.callTarget.number}. Press the call button to connect.`
+          : `Opening your dialler for ${input.callTarget.name}. Press the call button to connect.`),
+      cards,
+      intent,
+      extracted,
+      followUp: null,
+    };
+  }
 
   // ---- Treatment intent ---------------------------------------------------
   if (intent === 'want_treatment' || wantsTreatment(text)) {
