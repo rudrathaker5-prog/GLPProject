@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { detectDeviceLanguage } from '@i18n/index';
 import { useAuthStore } from '@features/auth/store/authStore';
 import {
+  configureNotificationActions,
   configureNotificationChannels,
   registerForPush,
 } from '@features/notifications/service/notificationService';
@@ -54,6 +55,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     (async () => {
       await initialise();
       await configureNotificationChannels();
+      // Must run before any notification using these categories is scheduled,
+      // or the action buttons simply do not render on it.
+      await configureNotificationActions();
       // Push registration is best-effort; local reminders work without it.
       void registerForPush();
       if (!cancelled) setReady(true);

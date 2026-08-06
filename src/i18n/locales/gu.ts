@@ -506,6 +506,10 @@ export const gu: DeepPartial<TranslationShape> = {
   },
 
   notifications: {
+    actionTaken: 'લઈ લીધી',
+    actionSnooze: 'પછી યાદ કરાવો',
+    actionCheckIn: 'ચેક-ઇન',
+    snoozedBody: 'ફરી યાદ કરાવીએ છીએ — તમે લીધી?',
     title: 'સૂચનાઓ',
     medicationTitle: '{{medication}}નો સમય થયો',
     medicationBody: 'લીધી છે તે નોંધવા ટૅપ કરો.',

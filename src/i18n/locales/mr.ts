@@ -506,6 +506,10 @@ export const mr: DeepPartial<TranslationShape> = {
   },
 
   notifications: {
+    actionTaken: 'घेतली',
+    actionSnooze: 'नंतर आठवण करा',
+    actionCheckIn: 'चेक-इन',
+    snoozedBody: 'पुन्हा आठवण करत आहोत — तुम्ही घेतली का?',
     title: 'सूचना',
     medicationTitle: '{{medication}} ची वेळ झाली',
     medicationBody: 'घेतले असे नोंदवण्यासाठी टॅप करा.',

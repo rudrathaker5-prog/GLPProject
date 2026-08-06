@@ -17,6 +17,7 @@ import { useAuthStore } from '@features/auth/store/authStore';
 import { DoctorAppointmentsScreen } from '@features/doctorPortal/screens/DoctorAppointmentsScreen';
 import { DoctorProfileScreen } from '@features/doctorPortal/screens/DoctorProfileScreen';
 import { PatientsScreen } from '@features/doctorPortal/screens/PatientsScreen';
+import { handleNotificationAction } from '@features/notifications/service/notificationActions';
 import { AboutScreen } from '@features/settings/screens/AboutScreen';
 import { useTranslation } from '@i18n/useTranslation';
 import { Icon, type IconName } from '@ui/components/Icon';
@@ -132,6 +133,23 @@ export function RootNavigator() {
   // Tapping a notification lands on the right tab and screen.
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      /*
+        Action buttons come through the same listener as a body tap. They are
+        handled first and then swallowed: "Taken" and "Snooze" are meant to
+        work with the phone still locked, so opening the app afterwards would
+        defeat the point of having them.
+      */
+      void handleNotificationAction(response).then((outcome) => {
+        if (outcome.handled) return;
+      });
+
+      if (
+        response.actionIdentifier &&
+        response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER
+      ) {
+        return;
+      }
+
       const deepLink = response.notification.request.content.data?.deepLink;
       if (typeof deepLink !== 'string') return;
 

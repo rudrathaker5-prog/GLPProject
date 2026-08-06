@@ -507,6 +507,10 @@ export const en = {
   },
 
   notifications: {
+    actionTaken: 'Taken',
+    actionSnooze: 'Remind me later',
+    actionCheckIn: 'Check in',
+    snoozedBody: 'Reminding you again — have you taken it?',
     title: 'Notifications',
     medicationTitle: 'Time for your {{medication}}',
     medicationBody: 'Tap to mark it as taken.',

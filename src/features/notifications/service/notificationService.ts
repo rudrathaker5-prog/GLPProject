@@ -72,6 +72,66 @@ export const CHANNELS: {
   },
 ];
 
+/**
+ * Notification action buttons.
+ *
+ * A medication reminder that can only be actioned by unlocking the phone,
+ * finding the app and tapping through to the dashboard is a reminder a lot of
+ * people dismiss and mean to come back to. Marking a dose taken from the
+ * notification shade is the difference between an adherence record that
+ * reflects reality and one that reflects who could be bothered to open an app.
+ *
+ * `SNOOZE` deliberately does not mark anything — it re-fires in 30 minutes and
+ * leaves the dose scheduled, because "remind me later" is not "I took it".
+ */
+export const NOTIFICATION_CATEGORIES = {
+  medicationDose: 'glpcare.medication.dose',
+  checkIn: 'glpcare.checkin',
+} as const;
+
+export const NOTIFICATION_ACTIONS = {
+  taken: 'TAKEN',
+  snooze: 'SNOOZE',
+  checkIn: 'CHECK_IN',
+} as const;
+
+/** How long "remind me later" pushes a dose reminder back. */
+export const SNOOZE_MINUTES = 30;
+
+/**
+ * Registers the action buttons. Must run before any notification using these
+ * categories is scheduled, or the buttons simply do not appear.
+ */
+export async function configureNotificationActions(): Promise<void> {
+  const { settings } = useSettingsStore.getState();
+
+  try {
+    await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.medicationDose, [
+      {
+        identifier: NOTIFICATION_ACTIONS.taken,
+        buttonTitle: translate(settings.language, 'notifications.actionTaken'),
+        options: { opensAppToForeground: false },
+      },
+      {
+        identifier: NOTIFICATION_ACTIONS.snooze,
+        buttonTitle: translate(settings.language, 'notifications.actionSnooze'),
+        options: { opensAppToForeground: false },
+      },
+    ]);
+
+    await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.checkIn, [
+      {
+        identifier: NOTIFICATION_ACTIONS.checkIn,
+        buttonTitle: translate(settings.language, 'notifications.actionCheckIn'),
+        options: { opensAppToForeground: true },
+      },
+    ]);
+  } catch (error) {
+    // Categories are a nicety; a reminder without buttons still fires.
+    console.warn('setNotificationCategoryAsync failed', error);
+  }
+}
+
 function channelFor(category: NotificationCategory): string {
   return CHANNELS.find((c) => c.category === category)?.id ?? 'motivation';
 }
@@ -152,6 +212,8 @@ interface ScheduleOptions {
   fireAt: Date;
   repeat?: { frequency: 'daily' | 'weekly'; weekday?: number; hour: number; minute: number };
   data?: Record<string, unknown>;
+  /** Which set of action buttons to attach. See NOTIFICATION_CATEGORIES. */
+  actionCategory?: string;
 }
 
 async function scheduleLocal(options: ScheduleOptions): Promise<string | null> {
@@ -184,6 +246,7 @@ async function scheduleLocal(options: ScheduleOptions): Promise<string | null> {
         title: options.title,
         body: options.body,
         sound: 'default',
+        categoryIdentifier: options.actionCategory,
         data: {
           category: options.category,
           referenceId: options.referenceId,
@@ -284,6 +347,7 @@ export async function scheduleMedicationReminders(
           weekday === null
             ? { frequency: 'daily', hour, minute }
             : { frequency: 'weekly', weekday, hour, minute },
+        actionCategory: NOTIFICATION_CATEGORIES.medicationDose,
         data: { deepLink: 'glpcare://medication', medicationId: medication.id },
       });
 
@@ -405,6 +469,7 @@ export async function scheduleCheckInReminder(intervalDays: number): Promise<voi
     title,
     body,
     fireAt,
+    actionCategory: NOTIFICATION_CATEGORIES.checkIn,
     data: { deepLink: 'glpcare://checkin' },
   });
 
