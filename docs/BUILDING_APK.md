@@ -232,6 +232,21 @@ missing or if its JavaScript and native halves are version-mismatched.
 That throw happens before React exists, so `ErrorBoundary` cannot catch it and
 there is no screen to render an error onto. The process simply dies.
 
+Nothing defers this for you. Verify it for your own config:
+
+```bash
+node -e "
+const {getDefaultConfig}=require('expo/metro-config');
+const c=getDefaultConfig(process.cwd());
+c.transformer.getTransformOptions(['index.js'],{dev:false,hot:false},()=>[])
+ .then(o=>console.log(JSON.stringify(o)));"
+# -> {"transform":{"experimentalImportSupport":true,"inlineRequires":false}}
+```
+
+`inlineRequires: false` means every import in the graph is evaluated eagerly
+when the bundle loads — a top-level import of a broken native module is enough
+to kill the app, whether or not anything ever renders the component using it.
+
 Two real instances in this app:
 
 - `expo-audio` patches `AudioModule.AudioPlayer.prototype` while its module is
