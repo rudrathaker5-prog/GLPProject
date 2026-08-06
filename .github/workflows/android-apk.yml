@@ -23,9 +23,16 @@ on:
         type: choice
         options: [debug, release]
 
+# Supersede pull-request checks, but never kill a run that is producing an APK.
+#
+# `cancel-in-progress: true` across the board cancelled four builds in one
+# afternoon: each push killed the run before it, and because the APK only
+# exists as that run's artifact, cancelling it threw the APK away. A pull
+# request re-check is genuinely disposable; a push or a manual dispatch is
+# someone waiting for a file.
 concurrency:
   group: android-apk-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -107,14 +114,17 @@ jobs:
         # A persistent keystore from secrets keeps the signature stable, so new
         # builds install over the old app. Without it we mint a throwaway key —
         # the APK still installs, but you must uninstall before upgrading.
+        id: signing
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           cd android/app
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > release.keystore
+            echo "persistent=true" >> "$GITHUB_OUTPUT"
             echo "Using the keystore from repository secrets."
           else
+            echo "persistent=false" >> "$GITHUB_OUTPUT"
             keytool -genkeypair -v \
               -storetype PKCS12 \
               -keystore release.keystore \
@@ -164,3 +174,43 @@ jobs:
           path: artifacts/*.apk
           retention-days: 30
           if-no-files-found: error
+
+      # Whether this APK installs over the last one is the single most
+      # consequential thing about a build here, and it was buried in a
+      # `::warning::` nobody reads. This app stores the patient's weights,
+      # doses and check-ins on the device, so "uninstall first" means "throw
+      # your record away". Say it on the run's summary page instead.
+      - name: Explain how to install this build
+        if: always()
+        run: |
+          {
+            echo "## APK"
+            echo
+            if [ "${{ steps.signing.outputs.persistent }}" = "true" ]; then
+              echo "Signed with the keystore from repository secrets."
+              echo
+              echo "**Installs over the previous build.** Your data is kept."
+            else
+              echo "Signed with a **throwaway key generated for this run**."
+              echo
+              echo "**You must uninstall the previous build first.** Android refuses"
+              echo "an upgrade when the signature changes, and uninstalling erases"
+              echo "everything the app stored on the device — weights, doses,"
+              echo "check-ins, chat history."
+              echo
+              echo "To stop this happening on every build, create the keystore once"
+              echo "and add it as a secret:"
+              echo
+              echo '```bash'
+              echo 'keytool -genkeypair -v -storetype PKCS12 \'
+              echo '  -keystore glpcare-release.keystore -alias glpcare \'
+              echo '  -keyalg RSA -keysize 2048 -validity 10000'
+              echo 'base64 -w0 glpcare-release.keystore   # macOS: base64 -i ...'
+              echo '```'
+              echo
+              echo "Settings → Secrets and variables → Actions:"
+              echo "\`ANDROID_KEYSTORE_BASE64\`, \`ANDROID_KEYSTORE_PASSWORD\`,"
+              echo "\`ANDROID_KEY_PASSWORD\`. Keep the keystore file safe — losing it"
+              echo "means never being able to update an installed app again."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
